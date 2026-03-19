@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xiif XamXam — Plan Financier</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --don:    #E8A317;
+  --ep:     #1E7B4B;
+  --inv:    #1565C0;
+  --dette:  #C0392B;
+  --conso:  #7D3C98;
+  --dark:   #0F1923;
+  --dark2:  #18232E;
+  --dark3:  #243040;
+  --border: #2E3F52;
+  --text:   #E8EDF2;
+  --muted:  #7A90A4;
+  --gold:   #F4C842;
+  --green:  #2ECC71;
+  --red:    #E74C3C;
+  --radius: 14px;
+  --card:   #1A2738;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden;}
+h1,h2,h3,h4{font-family:'Syne',sans-serif;}
+
+/* ── LAYOUT ── */
+.app{display:flex;min-height:100vh;}
+.sidebar{width:240px;background:var(--dark2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;transition:.3s;}
+.main{margin-left:240px;flex:1;padding:28px;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.logo{padding:24px 20px 20px;border-bottom:1px solid var(--border);}
+.logo .brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:1px;}
+.logo .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.nav{flex:1;padding:16px 0;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;color:var(--muted);font-size:14px;font-weight:500;transition:.2s;border-left:3px solid transparent;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.04);}
+.nav-item.active{color:var(--gold);background:rgba(244,200,66,.06);border-left-color:var(--gold);}
+.nav-item .icon{font-size:18px;width:22px;text-align:center;}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid var(--border);}
+.mois-select{width:100%;background:var(--dark3);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;outline:none;}
+.mois-select:focus{border-color:var(--gold);}
+.mois-label{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
+
+/* ── PAGES ── */
+.page{display:none;}.page.active{display:block;}
+
+/* ── HEADER ── */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.page-title{font-size:26px;font-weight:800;letter-spacing:-.5px;}
+.page-subtitle{font-size:13px;color:var(--muted);margin-top:3px;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:.2s;}
+.btn-gold{background:var(--gold);color:#1A1200;font-weight:700;}
+.btn-gold:hover{background:#f0bb2a;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-sm{padding:7px 14px;font-size:13px;}
+.btn-danger{background:#c0392b22;border:1px solid #c0392b55;color:#e74c3c;}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.card-sm{padding:14px 18px;}
+
+/* ── REVENU WIDGET ── */
+.revenu-strip{background:linear-gradient(135deg,#1A2F45,#0F2030);border:1px solid var(--gold);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;}
+.revenu-main{flex:1;min-width:200px;}
+.revenu-main .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);font-weight:700;margin-bottom:6px;}
+.revenu-main .value{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#fff;}
+.revenu-main .value span{font-size:15px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-left:6px;}
+.revenu-add{display:flex;gap:10px;align-items:center;}
+.revenu-input{background:var(--dark3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'Syne',sans-serif;font-size:16px;width:180px;outline:none;transition:.2s;}
+.revenu-input:focus{border-color:var(--gold);}
+
+/* ── PLAN CARDS ── */
+.plans-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-bottom:24px;}
+.plan-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);}
+.plan-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+.plan-header .plan-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.plan-header .plan-pct{font-size:13px;font-weight:600;opacity:.85;}
+.plan-body{background:var(--card);padding:16px 18px;}
+.plan-budget-bar{margin-bottom:14px;}
+.plan-budget-nums{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;}
+.plan-budget-nums .spent{font-weight:700;font-size:14px;}
+.plan-budget-nums .total{color:var(--muted);}
+.progress{height:7px;background:var(--dark3);border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;transition:.4s;}
+.plan-report{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);padding:8px 0 4px;border-top:1px solid var(--border);margin-top:10px;}
+.plan-report .report-val{font-weight:700;font-size:13px;}
+.plan-report .report-val.positive{color:var(--green);}
+.plan-report .report-val.negative{color:var(--red);}
+.plan-items{margin-top:10px;}
+.plan-item-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+.plan-item-row:last-child{border-bottom:none;}
+.plan-item-name{flex:1;font-size:13px;}
+.plan-item-prev{font-size:12px;color:var(--muted);width:80px;text-align:right;}
+.plan-item-spent{font-size:13px;font-weight:600;width:90px;text-align:right;}
+.item-input{background:var(--dark3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:7px;font-size:13px;width:110px;text-align:right;outline:none;font-family:'DM Sans',sans-serif;}
+.item-input:focus{border-color:var(--gold);}
+
+/* ── DETTE SECTION ── */
+.dette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px;}
+.dette-card{background:var(--card);border:1px solid #c0392b33;border-radius:var(--radius);padding:18px;}
+.dette-card .cname{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#E74C3C;margin-bottom:10px;}
+.dette-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+.dette-row .label{color:var(--muted);}
+.dette-row .val{font-weight:600;}
+.dette-row .val.paid{color:var(--green);}
+.dette-row .val.remain{color:#E74C3C;font-size:15px;font-family:'Syne',sans-serif;}
+.dette-progress{margin-top:10px;}
+.dette-actions{display:flex;gap:8px;margin-top:12px;}
+
+/* ── DEPENSES QUOTIDIENNES ── */
+.dq-header{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.dq-date{background:var(--dark3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;cursor:pointer;}
+.dq-date:focus{border-color:var(--gold);}
+.dq-form{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.dq-form-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:var(--gold);}
+.form-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+.form-input{background:var(--dark3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:.2s;width:100%;}
+.form-input:focus{border-color:var(--gold);}
+.form-select{background:var(--dark3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;cursor:pointer;width:100%;}
+.form-select:focus{border-color:var(--gold);}
+.dq-list{display:flex;flex-direction:column;gap:10px;}
+.dq-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;}
+.dq-item-plan{width:10px;height:36px;border-radius:4px;flex-shrink:0;}
+.dq-item-info{flex:1;}
+.dq-item-desc{font-size:14px;font-weight:500;}
+.dq-item-meta{font-size:12px;color:var(--muted);margin-top:2px;}
+.dq-item-amount{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;}
+.dq-item-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;transition:.2s;}
+.dq-item-del:hover{color:#e74c3c;}
+.dq-summary-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.dq-sum-chip{background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;}
+.dq-sum-chip .s-label{color:var(--muted);font-size:11px;}
+.dq-sum-chip .s-val{font-weight:700;font-size:15px;font-family:'Syne',sans-serif;}
+
+/* ── SYNTHESE ── */
+.synth-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+.synth-kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;}
+.synth-kpi .kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;}
+.synth-kpi .kpi-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+.synth-table{width:100%;border-collapse:collapse;}
+.synth-table th{text-align:left;padding:10px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);font-weight:600;}
+.synth-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);}
+.synth-table tr:hover td{background:rgba(255,255,255,.02);}
+.synth-table .mois-name{font-weight:700;}
+.synth-table .num{text-align:right;font-family:'Syne',sans-serif;font-size:14px;}
+.synth-table .pos{color:var(--green);}
+.synth-table .neg{color:var(--red);}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--dark2);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
+.modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:20px;}
+.modal-form{display:flex;flex-direction:column;gap:14px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:#1E7B4B;color:#fff;padding:13px 20px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.error{background:#C0392B;}
+
+/* ── MISC ── */
+.tag{display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:600;}
+.divider{height:1px;background:var(--border);margin:20px 0;}
+.section-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:16px;}
+.empty-state{text-align:center;padding:40px;color:var(--muted);}
+.empty-state .emoji{font-size:40px;display:block;margin-bottom:12px;}
+.empty-state p{font-size:14px;}
+.flex{display:flex;}.gap-2{gap:8px;}.gap-3{gap:12px;}.items-center{align-items:center;}.justify-between{justify-content:space-between;}.flex-1{flex:1;}
+.mb-4{margin-bottom:16px;}.mb-3{margin-bottom:12px;}
+.text-muted{color:var(--muted);font-size:13px;}
+.text-green{color:var(--green);}.text-red{color:var(--red);}.text-gold{color:var(--gold);}
+.font-bold{font-weight:700;}.font-syne{font-family:'Syne',sans-serif;}
+.scroll-table{overflow-x:auto;}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}.sidebar.open{transform:none;}
+  .main{margin-left:0;padding:16px;}
+  .form-row{grid-template-columns:1fr 1fr;}
+  .plans-grid{grid-template-columns:1fr;}
+  .synth-grid{grid-template-columns:1fr 1fr;}
+  .hamburger{display:flex!important;}
+}
+.hamburger{display:none;position:fixed;top:14px;left:14px;z-index:200;background:var(--dark2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;font-size:20px;}
+</style>
+</head>
+<body>
+
+<button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="logo">
+    <div class="brand">XIIF XAMXAM</div>
+    <div class="sub">Plan Financier Personnel</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
+      <span class="icon">🏠</span>Tableau de bord
+    </div>
+    <div class="nav-item" onclick="showPage('revenus')" data-page="revenus">
+      <span class="icon">💰</span>Revenus
+    </div>
+    <div class="nav-item" onclick="showPage('don')" data-page="don">
+      <span class="icon">🤲</span>Plan Don (10%)
+    </div>
+    <div class="nav-item" onclick="showPage('epargne')" data-page="epargne">
+      <span class="icon">💳</span>Plan Épargne (10%)
+    </div>
+    <div class="nav-item" onclick="showPage('invest')" data-page="invest">
+      <span class="icon">📈</span>Plan Investissement (5%)
+    </div>
+    <div class="nav-item" onclick="showPage('dette')" data-page="dette">
+      <span class="icon">⚠️</span>Paiement Dettes (10%)
+    </div>
+    <div class="nav-item" onclick="showPage('conso')" data-page="conso">
+      <span class="icon">🛒</span>Plan Consommation (65%)
+    </div>
+    <div class="divider" style="margin:8px 16px;"></div>
+    <div class="nav-item" onclick="showPage('quotidien')" data-page="quotidien">
+      <span class="icon">📝</span>Dépenses Quotidiennes
+    </div>
+    <div class="nav-item" onclick="showPage('synthese')" data-page="synthese">
+      <span class="icon">📊</span>Synthèse 7 Mois
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="mois-label">Mois actif</div>
+    <select class="mois-select" id="moisSelect" onchange="changeMois(this.value)">
+      <option value="0">Mars 2026</option>
+      <option value="1">Avril 2026</option>
+      <option value="2">Mai 2026</option>
+      <option value="3">Juin 2026</option>
+      <option value="4">Juillet 2026</option>
+      <option value="5">Août 2026</option>
+      <option value="6">Septembre 2026</option>
+    </select>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ── DASHBOARD ── -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div>
+      <div class="page-title" id="dash-title">Tableau de bord — Mars 2026</div>
+      <div class="page-subtitle">Vue d'ensemble de ton plan financier</div>
+    </div>
+    <button class="btn btn-gold" onclick="openAddRevenu()">+ Ajouter revenu</button>
+  </div>
+
+  <!-- Revenu strip -->
+  <div class="revenu-strip">
+    <div class="revenu-main">
+      <div class="label">Revenu total du mois</div>
+      <div class="value" id="dash-revenu">0 <span>FCFA</span></div>
+    </div>
+    <div id="dash-plan-chips" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- Plan cards grid -->
+  <div class="plans-grid" id="dash-plans-grid"></div>
+
+  <!-- Dépenses récentes -->
+  <div class="card">
+    <div class="section-title">Dépenses récentes du jour</div>
+    <div id="dash-recent"></div>
+  </div>
+</div>
+
+<!-- ── REVENUS ── -->
+<div class="page" id="page-revenus">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Revenus — <span id="rev-mois-title"></span></div>
+      <div class="page-subtitle">Chaque FCFA gagné est réparti automatiquement</div>
+    </div>
+    <button class="btn btn-gold" onclick="openAddRevenu()">+ Ajouter un revenu</button>
+  </div>
+  <div class="card mb-4">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <div class="text-muted">Total cumulé du mois</div>
+        <div class="font-syne" style="font-size:28px;font-weight:800;" id="rev-total">0 FCFA</div>
+      </div>
+      <div id="rev-repartition" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="progress" style="height:10px;">
+      <div class="progress-fill" id="rev-bar" style="width:100%;background:var(--gold);"></div>
+    </div>
+  </div>
+  <div id="rev-list"></div>
+</div>
+
+<!-- ── PLAN DON ── -->
+<div class="page" id="page-don">
+  <div class="page-header">
+    <div><div class="page-title">🤲 Plan Don — 10%</div><div class="page-subtitle">Sadaqa, aides familiales, solidarité</div></div>
+    <button class="btn btn-gold btn-sm" onclick="addItemLine('don')">+ Ajouter ligne</button>
+  </div>
+  <div id="plan-don-content"></div>
+</div>
+
+<!-- ── PLAN EPARGNE ── -->
+<div class="page" id="page-epargne">
+  <div class="page-header">
+    <div><div class="page-title">💳 Plan Épargne — 10%</div><div class="page-subtitle">BOA, tontine, fonds d'urgence</div></div>
+    <button class="btn btn-gold btn-sm" onclick="addItemLine('epargne')">+ Ajouter ligne</button>
+  </div>
+  <div id="plan-epargne-content"></div>
+</div>
+
+<!-- ── PLAN INVEST ── -->
+<div class="page" id="page-invest">
+  <div class="page-header">
+    <div><div class="page-title">📈 Plan Investissement — 5%</div><div class="page-subtitle">Commerce, agriculture, BRVM</div></div>
+    <button class="btn btn-gold btn-sm" onclick="addItemLine('invest')">+ Ajouter ligne</button>
+  </div>
+  <div id="plan-invest-content"></div>
+</div>
+
+<!-- ── PLAN DETTE ── -->
+<div class="page" id="page-dette">
+  <div class="page-header">
+    <div><div class="page-title">⚠️ Paiement Dettes — 10%</div><div class="page-subtitle">Remboursements planifiés</div></div>
+    <button class="btn btn-gold btn-sm" onclick="openAddDette()">+ Ajouter créancier</button>
+  </div>
+  <div id="plan-dette-content"></div>
+</div>
+
+<!-- ── PLAN CONSO ── -->
+<div class="page" id="page-conso">
+  <div class="page-header">
+    <div><div class="page-title">🛒 Plan Consommation — 65%</div><div class="page-subtitle">Dépenses courantes du foyer</div></div>
+    <button class="btn btn-gold btn-sm" onclick="addItemLine('conso')">+ Ajouter ligne</button>
+  </div>
+  <div id="plan-conso-content"></div>
+</div>
+
+<!-- ── DEPENSES QUOTIDIENNES ── -->
+<div class="page" id="page-quotidien">
+  <div class="page-header">
+    <div><div class="page-title">📝 Dépenses Quotidiennes</div><div class="page-subtitle">Enregistre chaque dépense au moment où elle se produit</div></div>
+  </div>
+  <div class="dq-form">
+    <div class="dq-form-title">➕ Nouvelle dépense</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-input" id="dq-desc" placeholder="Ex: Taxi Dakar Plateau" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Montant (FCFA)</label>
+        <input class="form-input" id="dq-amount" type="number" placeholder="2500" min="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plan / Rubrique</label>
+        <select class="form-select" id="dq-plan">
+          <option value="don">🤲 Don</option>
+          <option value="epargne">💳 Épargne</option>
+          <option value="invest">📈 Investissement</option>
+          <option value="dette">⚠️ Dettes</option>
+          <option value="conso" selected>🛒 Consommation</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="dq-date" type="date" />
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">Sous-catégorie (optionnel)</label>
+        <select class="form-select" id="dq-subcat"></select>
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">Note</label>
+        <input class="form-input" id="dq-note" placeholder="Note..." />
+      </div>
+      <div style="align-self:flex-end;">
+        <button class="btn btn-gold" onclick="addDQ()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  <div id="dq-summary" class="dq-summary-bar"></div>
+  <div class="flex items-center justify-between mb-3">
+    <div class="section-title" style="margin:0;">Journal du mois</div>
+    <input class="form-input" id="dq-filter-date" type="date" style="width:160px;" placeholder="Filtrer par date" oninput="renderDQ()" />
+  </div>
+  <div id="dq-list"></div>
+</div>
+
+<!-- ── SYNTHESE ── -->
+<div class="page" id="page-synthese">
+  <div class="page-header">
+    <div><div class="page-title">📊 Synthèse 7 Mois</div><div class="page-subtitle">Mars → Septembre 2026</div></div>
+  </div>
+  <div class="synth-grid" id="synth-kpis"></div>
+  <div class="card">
+    <div class="section-title">Détail mensuel</div>
+    <div class="scroll-table">
+      <table class="synth-table" id="synth-table"></table>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ── MODAL: AJOUTER REVENU ── -->
+<div class="modal-overlay" id="modal-revenu">
+  <div class="modal">
+    <div class="modal-title">💰 Ajouter un revenu</div>
+    <div class="modal-form">
+      <div class="form-group">
+        <label class="form-label">Source du revenu</label>
+        <input class="form-input" id="m-rev-source" placeholder="Ex: Salaire CESTI, Cours Laobé..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Montant (FCFA)</label>
+        <input class="form-input" id="m-rev-amount" type="number" placeholder="50000" min="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="m-rev-date" type="date" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optionnel)</label>
+        <input class="form-input" id="m-rev-note" placeholder="..." />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-revenu')">Annuler</button>
+      <button class="btn btn-gold" onclick="saveRevenu()">Confirmer & Répartir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: AJOUTER DETTE ── -->
+<div class="modal-overlay" id="modal-dette">
+  <div class="modal">
+    <div class="modal-title">⚠️ Ajouter un créancier</div>
+    <div class="modal-form">
+      <div class="form-group">
+        <label class="form-label">Nom du créancier</label>
+        <input class="form-input" id="m-dette-nom" placeholder="Ex: Amadou Ba, Banque BOA..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Montant total de la dette (FCFA)</label>
+        <input class="form-input" id="m-dette-total" type="number" placeholder="150000" min="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Montant déjà payé (FCFA)</label>
+        <input class="form-input" id="m-dette-paye" type="number" placeholder="0" min="0" value="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mensualité prévue (FCFA)</label>
+        <input class="form-input" id="m-dette-mens" type="number" placeholder="25000" min="0" value="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note / Contexte</label>
+        <input class="form-input" id="m-dette-note" placeholder="Ex: dette familiale, date limite..." />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-dette')">Annuler</button>
+      <button class="btn btn-gold" onclick="saveDette()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: PAIEMENT DETTE ── -->
+<div class="modal-overlay" id="modal-paiement">
+  <div class="modal">
+    <div class="modal-title">💸 Enregistrer un paiement</div>
+    <div class="modal-form">
+      <div id="m-paiement-info" style="background:var(--dark3);padding:12px;border-radius:10px;font-size:14px;margin-bottom:4px;"></div>
+      <div class="form-group">
+        <label class="form-label">Montant payé (FCFA)</label>
+        <input class="form-input" id="m-paiement-amount" type="number" placeholder="25000" min="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date du paiement</label>
+        <input class="form-input" id="m-paiement-date" type="date" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-paiement')">Annuler</button>
+      <button class="btn btn-gold" onclick="savePaiement()">Confirmer paiement</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+const MOIS_NAMES = ['Mars 2026','Avril 2026','Mai 2026','Juin 2026','Juillet 2026','Août 2026','Septembre 2026'];
+const PLAN_CONFIG = {
+  don:    {label:'Plan Don',        icon:'🤲', pct:0.10, color:'var(--don)',   light:'#2A2010'},
+  epargne:{label:'Plan Épargne',    icon:'💳', pct:0.10, color:'var(--ep)',    light:'#0F2A1A'},
+  invest: {label:'Plan Investissement',icon:'📈',pct:0.05,color:'var(--inv)',  light:'#0A1E38'},
+  dette:  {label:'Paiement Dettes', icon:'⚠️', pct:0.10, color:'var(--dette)', light:'#2A0A0A'},
+  conso:  {label:'Plan Consommation',icon:'🛒', pct:0.65, color:'var(--conso)', light:'#1E0A2A'},
+};
+const PLAN_KEYS = ['don','epargne','invest','dette','conso'];
+const DEFAULT_ITEMS = {
+  don:    ['Sadaqa / Aumône','Zakat si applicable','Aides familiales','Solidarité communautaire','Cadeaux famille/amis'],
+  epargne:['BOA / Banque','Tontine / AVEC',"Fonds d'urgence",'Objectif moyen terme','Retraite / Long terme'],
+  invest: ['Commerce en ligne','Agriculture maraîchère','Aviculture','BRVM / Bourse','Terrain / Immobilier'],
+  dette:  [],
+  conso:  ['Ravitaillement foyer','Transport quotidien','Eau / Électricité','Internet / Mobile','Scolarité enfants','Santé / Pharmacie','Habits / Vêtements','Sorties / Loisirs','Imprévus'],
+};
+
+let state = loadState();
+let currentMois = 0;
+let currentPage = 'dashboard';
+let editingDetteId = null;
+
+function defaultMoisData(){
+  const items = {};
+  for(const k of PLAN_KEYS){
+    items[k] = (DEFAULT_ITEMS[k]||[]).map(n=>({id:uid(),name:n,budgetPrevu:0,depense:0}));
+  }
+  return {revenus:[],items,dettes:[],depenses:[],reportPrev:{}};
+}
+
+function loadState(){
+  try{ return JSON.parse(localStorage.getItem('xiif_state'))||initState(); }
+  catch(e){ return initState(); }
+}
+function initState(){
+  const s = {mois:[]};
+  for(let i=0;i<7;i++) s.mois.push(defaultMoisData());
+  return s;
+}
+function saveState(){ localStorage.setItem('xiif_state', JSON.stringify(state)); }
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+function getMois(){ return state.mois[currentMois]; }
+
+// ════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════
+function showPage(p){
+  currentPage=p;
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelector(`.nav-item[data-page="${p}"]`)?.classList.add('active');
+  renderPage(p);
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function changeMois(v){
+  currentMois=parseInt(v);
+  renderPage(currentPage);
+  document.getElementById('dash-title').textContent='Tableau de bord — '+MOIS_NAMES[currentMois];
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+function renderPage(p){
+  if(p==='dashboard')     renderDashboard();
+  else if(p==='revenus')  renderRevenus();
+  else if(p==='don')      renderPlan('don');
+  else if(p==='epargne')  renderPlan('epargne');
+  else if(p==='invest')   renderPlan('invest');
+  else if(p==='dette')    renderDette();
+  else if(p==='conso')    renderPlan('conso');
+  else if(p==='quotidien')renderDQ();
+  else if(p==='synthese') renderSynthese();
+}
+
+// ════════════════════════════════════════════════════════════
+// REVENU
+// ════════════════════════════════════════════════════════════
+function totalRevenu(mi){ return (state.mois[mi].revenus||[]).reduce((s,r)=>s+r.amount,0); }
+function budgetPlan(mi,plan){ return totalRevenu(mi)*PLAN_CONFIG[plan].pct + getReport(mi,plan); }
+function getReport(mi,plan){
+  if(mi===0) return 0;
+  const prev=state.mois[mi-1];
+  const prevBudget=totalRevenu(mi-1)*PLAN_CONFIG[plan].pct+(mi>1?getReport(mi-1,plan):0);
+  const prevDepense=planDepense(mi-1,plan);
+  return Math.max(0, prevBudget-prevDepense);
+}
+function planDepense(mi,plan){
+  const m=state.mois[mi];
+  if(plan==='dette') return (m.dettes||[]).reduce((s,d)=>s+d.paye,0);
+  return (m.items[plan]||[]).reduce((s,item)=>s+item.depense,0);
+}
+function planDepenseDQ(mi,plan){
+  return (state.mois[mi].depenses||[]).filter(d=>d.plan===plan).reduce((s,d)=>s+d.amount,0);
+}
+
+function openAddRevenu(){
+  const d=new Date();
+  document.getElementById('m-rev-date').value=d.toISOString().slice(0,10);
+  document.getElementById('m-rev-source').value='';
+  document.getElementById('m-rev-amount').value='';
+  document.getElementById('m-rev-note').value='';
+  document.getElementById('modal-revenu').classList.add('open');
+}
+function saveRevenu(){
+  const src=document.getElementById('m-rev-source').value.trim();
+  const amt=parseFloat(document.getElementById('m-rev-amount').value);
+  const dt=document.getElementById('m-rev-date').value;
+  const note=document.getElementById('m-rev-note').value.trim();
+  if(!src||!amt||amt<1){toast('Remplis source et montant','error');return;}
+  getMois().revenus.push({id:uid(),source:src,amount:amt,date:dt,note});
+  saveState();
+  closeModal('modal-revenu');
+  toast(`+${fmt(amt)} FCFA ajouté et réparti ✓`);
+  renderPage(currentPage);
+}
+
+function deleteRevenu(id){
+  getMois().revenus=getMois().revenus.filter(r=>r.id!==id);
+  saveState(); renderPage(currentPage);
+}
+
+function renderRevenus(){
+  document.getElementById('rev-mois-title').textContent=MOIS_NAMES[currentMois];
+  const mi=currentMois, m=getMois(), total=totalRevenu(mi);
+  document.getElementById('rev-total').textContent=fmt(total)+' FCFA';
+
+  // Répartition chips
+  const chips=PLAN_KEYS.map(k=>`<div style="background:${PLAN_CONFIG[k].light};border:1px solid ${PLAN_CONFIG[k].color};border-radius:8px;padding:6px 12px;font-size:12px;">
+    <div style="color:var(--muted);font-size:10px;">${PLAN_CONFIG[k].label}</div>
+    <div style="font-weight:700;color:${PLAN_CONFIG[k].color};">${fmt(total*PLAN_CONFIG[k].pct)} FCFA</div>
+  </div>`).join('');
+  document.getElementById('rev-repartition').innerHTML=chips;
+
+  // List
+  const list=document.getElementById('rev-list');
+  if(!m.revenus.length){list.innerHTML=`<div class="empty-state"><span class="emoji">💸</span><p>Aucun revenu enregistré pour ce mois.</p></div>`;return;}
+  list.innerHTML=m.revenus.slice().reverse().map(r=>`
+    <div class="card card-sm mb-3" style="display:flex;align-items:center;gap:14px;">
+      <div style="font-size:28px;">💰</div>
+      <div class="flex-1">
+        <div style="font-weight:600;font-size:15px;">${r.source}</div>
+        <div class="text-muted">${r.date}${r.note?' · '+r.note:''}</div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gold);">+${fmt(r.amount)}</div>
+      <button class="dq-item-del" onclick="deleteRevenu('${r.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// PLAN DETAIL (DON / EPARGNE / INVEST / CONSO)
+// ════════════════════════════════════════════════════════════
+function renderPlan(plan){
+  const cfg=PLAN_CONFIG[plan];
+  const mi=currentMois, m=getMois();
+  const total=totalRevenu(mi);
+  const budget=budgetPlan(mi,plan);
+  const report=getReport(mi,plan);
+  const dqContrib=planDepenseDQ(mi,plan);
+  const items=m.items[plan]||[];
+  const totalDepense=items.reduce((s,it)=>s+it.depense,0)+dqContrib;
+  const pct=budget>0?Math.min(100,(totalDepense/budget)*100):0;
+  const solde=budget-totalDepense;
+
+  const el=document.getElementById('plan-'+plan+'-content');
+  el.innerHTML=`
+  <div class="card mb-4" style="border-color:${cfg.color}33;">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Budget alloué (${(cfg.pct*100).toFixed(0)}% du revenu${report>0?' + report '+fmt(report)+' FCFA':''})</div>
+        <div class="font-syne" style="font-size:26px;font-weight:800;">${fmt(budget)} <span style="font-size:14px;color:var(--muted);">FCFA</span></div>
+      </div>
+      <div style="text-align:right;">
+        <div class="text-muted" style="font-size:11px;">Solde disponible</div>
+        <div class="font-syne" style="font-size:22px;font-weight:800;color:${solde>=0?'var(--green)':'var(--red)'};">${fmt(solde)} FCFA</div>
+      </div>
+    </div>
+    <div class="progress" style="height:8px;"><div class="progress-fill" style="width:${pct}%;background:${cfg.color};"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;">
+      <span style="color:${cfg.color};font-weight:700;">${fmt(totalDepense)} dépensé</span>
+      <span class="text-muted">${pct.toFixed(1)}% du budget</span>
+    </div>
+    ${dqContrib>0?`<div style="margin-top:8px;font-size:12px;color:var(--muted);">📝 Dont <strong style="color:${cfg.color};">${fmt(dqContrib)} FCFA</strong> via dépenses quotidiennes</div>`:''}
+  </div>
+
+  <div class="card">
+    <div class="section-title">Lignes budgétaires</div>
+    <table style="width:100%;border-collapse:collapse;" id="plan-table-${plan}">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="text-align:left;padding:10px 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Désignation</th>
+          <th style="text-align:right;padding:10px 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;width:130px;">Budget prévu</th>
+          <th style="text-align:right;padding:10px 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;width:130px;">Montant dépensé</th>
+          <th style="text-align:right;padding:10px 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;width:90px;">Écart</th>
+          <th style="width:36px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(item=>`
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 8px;">
+              <input class="item-input" style="width:100%;text-align:left;font-size:14px;" value="${esc(item.name)}"
+                onchange="updateItemName('${plan}','${item.id}',this.value)" />
+            </td>
+            <td style="padding:10px 8px;text-align:right;">
+              <input class="item-input" type="number" min="0" value="${item.budgetPrevu||''}" placeholder="0"
+                onchange="updateItemBudget('${plan}','${item.id}',this.value)" />
+            </td>
+            <td style="padding:10px 8px;text-align:right;">
+              <input class="item-input" style="color:${item.depense>0?cfg.color:'inherit'};" type="number" min="0" value="${item.depense||''}" placeholder="0"
+                onchange="updateItemDepense('${plan}','${item.id}',this.value)" />
+            </td>
+            <td style="padding:10px 8px;text-align:right;font-weight:700;font-size:13px;color:${(item.budgetPrevu-item.depense)>=0?'var(--green)':'var(--red)'};">
+              ${item.budgetPrevu>0||item.depense>0?fmt(item.budgetPrevu-item.depense):'—'}
+            </td>
+            <td style="padding:10px 4px;">
+              <button class="dq-item-del" onclick="deleteItem('${plan}','${item.id}')">✕</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--dark3);">
+          <td style="padding:10px 8px;font-weight:700;font-size:13px;">TOTAL</td>
+          <td style="padding:10px 8px;text-align:right;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">${fmt(items.reduce((s,i)=>s+i.budgetPrevu,0))}</td>
+          <td style="padding:10px 8px;text-align:right;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:${cfg.color};">${fmt(totalDepense)}</td>
+          <td style="padding:10px 8px;text-align:right;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:${solde>=0?'var(--green)':'var(--red)'};">${fmt(solde)}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>`;
+}
+
+function updateItemName(plan,id,v){
+  const item=getMois().items[plan].find(i=>i.id===id);
+  if(item) item.name=v;
+  saveState();
+}
+function updateItemBudget(plan,id,v){
+  const item=getMois().items[plan].find(i=>i.id===id);
+  if(item) item.budgetPrevu=parseFloat(v)||0;
+  saveState(); renderPlan(plan);
+}
+function updateItemDepense(plan,id,v){
+  const item=getMois().items[plan].find(i=>i.id===id);
+  if(item) item.depense=parseFloat(v)||0;
+  saveState(); renderPlan(plan);
+}
+function deleteItem(plan,id){
+  getMois().items[plan]=getMois().items[plan].filter(i=>i.id!==id);
+  saveState(); renderPlan(plan);
+}
+function addItemLine(plan){
+  getMois().items[plan].push({id:uid(),name:'Nouvelle ligne',budgetPrevu:0,depense:0});
+  saveState(); renderPlan(plan);
+}
+
+// ════════════════════════════════════════════════════════════
+// DETTES
+// ════════════════════════════════════════════════════════════
+function openAddDette(){
+  editingDetteId=null;
+  ['m-dette-nom','m-dette-total','m-dette-mens','m-dette-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-dette-paye').value='0';
+  document.getElementById('modal-dette').classList.add('open');
+}
+function saveDette(){
+  const nom=document.getElementById('m-dette-nom').value.trim();
+  const total=parseFloat(document.getElementById('m-dette-total').value)||0;
+  const paye=parseFloat(document.getElementById('m-dette-paye').value)||0;
+  const mens=parseFloat(document.getElementById('m-dette-mens').value)||0;
+  const note=document.getElementById('m-dette-note').value.trim();
+  if(!nom||!total){toast('Nom et montant total requis','error');return;}
+  const m=getMois();
+  if(editingDetteId){
+    const d=m.dettes.find(d=>d.id===editingDetteId);
+    if(d){Object.assign(d,{nom,total,paye,mens,note});}
+  } else {
+    m.dettes.push({id:uid(),nom,total,paye,mens,note,historique:[]});
+  }
+  saveState(); closeModal('modal-dette'); renderDette(); toast('Créancier enregistré ✓');
+}
+function openEditDette(id){
+  editingDetteId=id;
+  const d=getMois().dettes.find(d=>d.id===id);
+  if(!d) return;
+  document.getElementById('m-dette-nom').value=d.nom;
+  document.getElementById('m-dette-total').value=d.total;
+  document.getElementById('m-dette-paye').value=d.paye;
+  document.getElementById('m-dette-mens').value=d.mens;
+  document.getElementById('m-dette-note').value=d.note||'';
+  document.getElementById('modal-dette').classList.add('open');
+}
+let paiementDetteId=null;
+function openPaiement(id){
+  paiementDetteId=id;
+  const d=getMois().dettes.find(d=>d.id===id);
+  if(!d) return;
+  document.getElementById('m-paiement-info').innerHTML=`<strong>${d.nom}</strong><br>Reste à payer : <strong style="color:var(--red);">${fmt(d.total-d.paye)} FCFA</strong>`;
+  document.getElementById('m-paiement-amount').value=d.mens||'';
+  const dt=new Date();
+  document.getElementById('m-paiement-date').value=dt.toISOString().slice(0,10);
+  document.getElementById('modal-paiement').classList.add('open');
+}
+function savePaiement(){
+  const amt=parseFloat(document.getElementById('m-paiement-amount').value)||0;
+  const dt=document.getElementById('m-paiement-date').value;
+  if(!amt||amt<1){toast('Montant requis','error');return;}
+  const d=getMois().dettes.find(d=>d.id===paiementDetteId);
+  if(!d) return;
+  d.paye=Math.min(d.total, d.paye+amt);
+  d.historique=d.historique||[];
+  d.historique.push({date:dt,amount:amt});
+  saveState(); closeModal('modal-paiement'); renderDette();
+  toast(`Paiement de ${fmt(amt)} FCFA enregistré ✓`);
+}
+function deleteDette(id){
+  getMois().dettes=getMois().dettes.filter(d=>d.id!==id);
+  saveState(); renderDette();
+}
+
+function renderDette(){
+  const mi=currentMois, m=getMois();
+  const total=totalRevenu(mi);
+  const budget=budgetPlan(mi,'dette');
+  const totalPaye=m.dettes.reduce((s,d)=>s+d.paye,0);
+  const solde=budget-totalPaye;
+  const el=document.getElementById('plan-dette-content');
+
+  const summary=`
+  <div class="card mb-4" style="border-color:var(--dette)33;">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Budget Dettes (10% du revenu${getReport(mi,'dette')>0?' + report '+fmt(getReport(mi,'dette'))+'  FCFA':''})</div>
+        <div class="font-syne" style="font-size:26px;font-weight:800;">${fmt(budget)} <span style="font-size:14px;color:var(--muted);">FCFA</span></div>
+      </div>
+      <div style="text-align:right;">
+        <div class="text-muted" style="font-size:11px;">Solde disponible</div>
+        <div class="font-syne" style="font-size:22px;font-weight:800;color:${solde>=0?'var(--green)':'var(--red)'};">${fmt(solde)} FCFA</div>
+      </div>
+    </div>
+    <div class="progress" style="height:8px;"><div class="progress-fill" style="width:${budget>0?Math.min(100,(totalPaye/budget)*100):0}%;background:var(--dette);"></div></div>
+  </div>`;
+
+  if(!m.dettes.length){
+    el.innerHTML=summary+`<div class="empty-state"><span class="emoji">✅</span><p>Aucune dette enregistrée. C'est excellent !</p></div>`;
+    return;
+  }
+
+  const cards=m.dettes.map(d=>{
+    const reste=d.total-d.paye;
+    const pct=d.total>0?Math.min(100,(d.paye/d.total)*100):0;
+    return `<div class="dette-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div class="cname">${esc(d.nom)}</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline btn-sm" onclick="openEditDette('${d.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteDette('${d.id}')">✕</button>
+        </div>
+      </div>
+      <div class="dette-row"><span class="label">Dette totale</span><span class="val">${fmt(d.total)} FCFA</span></div>
+      <div class="dette-row"><span class="label">Déjà payé</span><span class="val paid">${fmt(d.paye)} FCFA</span></div>
+      <div class="dette-row"><span class="label">Reste à payer</span><span class="val remain">${fmt(reste)} FCFA</span></div>
+      ${d.mens>0?`<div class="dette-row"><span class="label">Mensualité prévue</span><span class="val">${fmt(d.mens)} FCFA</span></div>`:''}
+      ${d.note?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">${esc(d.note)}</div>`:''}
+      <div class="dette-progress">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;"><span>Progression</span><span>${pct.toFixed(0)}%</span></div>
+        <div class="progress"><div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--dette)'};"></div></div>
+      </div>
+      ${pct>=100?`<div style="text-align:center;color:var(--green);font-weight:700;margin-top:10px;">✅ Dette soldée !</div>`:`
+      <div class="dette-actions">
+        <button class="btn btn-gold" style="flex:1;" onclick="openPaiement('${d.id}')">💸 Enregistrer paiement</button>
+      </div>`}
+    </div>`;
+  }).join('');
+
+  el.innerHTML=summary+`<div class="dette-grid">${cards}</div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// DEPENSES QUOTIDIENNES
+// ════════════════════════════════════════════════════════════
+function initDQDate(){
+  const d=new Date();
+  document.getElementById('dq-date').value=d.toISOString().slice(0,10);
+  document.getElementById('dq-filter-date').value='';
+}
+
+function updateDQSubcat(){
+  const plan=document.getElementById('dq-plan').value;
+  const items=getMois().items[plan]||[];
+  const sel=document.getElementById('dq-subcat');
+  sel.innerHTML=`<option value="">— Général —</option>`+
+    items.filter(i=>i.name).map(i=>`<option value="${esc(i.name)}">${esc(i.name)}</option>`).join('');
+}
+
+function addDQ(){
+  const desc=document.getElementById('dq-desc').value.trim();
+  const amount=parseFloat(document.getElementById('dq-amount').value);
+  const plan=document.getElementById('dq-plan').value;
+  const date=document.getElementById('dq-date').value;
+  const subcat=document.getElementById('dq-subcat').value;
+  const note=document.getElementById('dq-note').value.trim();
+  if(!desc||!amount||amount<1){toast('Description et montant requis','error');return;}
+  getMois().depenses.push({id:uid(),desc,amount,plan,date,subcat,note});
+  // Si sous-cat liée à un item, mettre à jour le montant dépensé
+  if(subcat){
+    const item=getMois().items[plan]?.find(i=>i.name===subcat);
+    if(item) item.depense+=amount;
+  }
+  saveState();
+  document.getElementById('dq-desc').value='';
+  document.getElementById('dq-amount').value='';
+  document.getElementById('dq-note').value='';
+  toast(`${fmt(amount)} FCFA enregistré ✓`);
+  renderDQ();
+}
+
+function deleteDQ(id){
+  const m=getMois();
+  const dq=m.depenses.find(d=>d.id===id);
+  if(dq?.subcat){
+    const item=m.items[dq.plan]?.find(i=>i.name===dq.subcat);
+    if(item) item.depense=Math.max(0,item.depense-dq.amount);
+  }
+  m.depenses=m.depenses.filter(d=>d.id!==id);
+  saveState(); renderDQ();
+}
+
+function renderDQ(){
+  const m=getMois();
+  const filterDate=document.getElementById('dq-filter-date')?.value||'';
+  const list=filterDate?m.depenses.filter(d=>d.date===filterDate):m.depenses;
+
+  // Summary chips
+  const sumByPlan={};
+  PLAN_KEYS.forEach(k=>sumByPlan[k]=0);
+  list.forEach(d=>{ if(sumByPlan[d.plan]!==undefined) sumByPlan[d.plan]+=d.amount; });
+  const totalDQ=list.reduce((s,d)=>s+d.amount,0);
+
+  document.getElementById('dq-summary').innerHTML=
+    `<div class="dq-sum-chip"><div class="s-label">TOTAL ${filterDate?'CE JOUR':'CE MOIS'}</div><div class="s-val text-gold">${fmt(totalDQ)} FCFA</div></div>`+
+    PLAN_KEYS.map(k=>sumByPlan[k]>0?`<div class="dq-sum-chip" style="border-color:${PLAN_CONFIG[k].color}44;"><div class="s-label">${PLAN_CONFIG[k].icon} ${PLAN_CONFIG[k].label}</div><div class="s-val" style="color:${PLAN_CONFIG[k].color};">${fmt(sumByPlan[k])}</div></div>`:'').join('');
+
+  const el=document.getElementById('dq-list');
+  if(!list.length){el.innerHTML=`<div class="empty-state"><span class="emoji">📝</span><p>Aucune dépense enregistrée.</p></div>`;return;}
+  el.innerHTML=list.slice().reverse().map(d=>{
+    const cfg=PLAN_CONFIG[d.plan];
+    return `<div class="dq-item">
+      <div class="dq-item-plan" style="background:${cfg.color};"></div>
+      <div class="dq-item-info">
+        <div class="dq-item-desc">${esc(d.desc)}</div>
+        <div class="dq-item-meta">${d.date}${d.subcat?' · '+d.subcat:''}${d.note?' · '+esc(d.note):''} <span style="color:${cfg.color};font-weight:600;">[${cfg.label}]</span></div>
+      </div>
+      <div class="dq-item-amount" style="color:${cfg.color};">${fmt(d.amount)}</div>
+      <button class="dq-item-del" onclick="deleteDQ('${d.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════
+function renderDashboard(){
+  const mi=currentMois, m=getMois();
+  const total=totalRevenu(mi);
+  document.getElementById('dash-revenu').innerHTML=`${fmt(total)} <span>FCFA</span>`;
+  document.getElementById('dash-title').textContent='Tableau de bord — '+MOIS_NAMES[mi];
+
+  // Plan chips in revenu strip
+  document.getElementById('dash-plan-chips').innerHTML=PLAN_KEYS.map(k=>{
+    const cfg=PLAN_CONFIG[k];
+    const budget=budgetPlan(mi,k);
+    const depense=k==='dette'?(m.dettes||[]).reduce((s,d)=>s+d.paye,0):(m.items[k]||[]).reduce((s,i)=>s+i.depense,0)+planDepenseDQ(mi,k);
+    return `<div style="background:${cfg.light};border:1px solid ${cfg.color}44;border-radius:10px;padding:8px 14px;min-width:120px;">
+      <div style="font-size:11px;color:var(--muted);">${cfg.icon} ${cfg.label}</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:${cfg.color};">${fmt(budget)}</div>
+      <div style="font-size:11px;color:var(--muted);">dép: ${fmt(depense)}</div>
+    </div>`;
+  }).join('');
+
+  // Plan cards
+  const grid=document.getElementById('dash-plans-grid');
+  grid.innerHTML=PLAN_KEYS.map(k=>{
+    const cfg=PLAN_CONFIG[k];
+    const budget=budgetPlan(mi,k);
+    const depense=k==='dette'?(m.dettes||[]).reduce((s,d)=>s+d.paye,0):(m.items[k]||[]).reduce((s,i)=>s+i.depense,0)+planDepenseDQ(mi,k);
+    const pct=budget>0?Math.min(100,(depense/budget)*100):0;
+    const solde=budget-depense;
+    const rep=getReport(mi,k);
+    return `<div class="plan-card" onclick="showPage('${k==='epargne'?'epargne':k==='invest'?'invest':k}')" style="cursor:pointer;">
+      <div class="plan-header" style="background:${cfg.light};border-bottom:1px solid ${cfg.color}44;">
+        <div class="plan-name">${cfg.icon} ${cfg.label}</div>
+        <div class="plan-pct" style="color:${cfg.color};">${(cfg.pct*100).toFixed(0)}%</div>
+      </div>
+      <div class="plan-body">
+        <div class="plan-budget-bar">
+          <div class="plan-budget-nums">
+            <span class="spent" style="color:${cfg.color};">${fmt(depense)} FCFA</span>
+            <span class="total">/ ${fmt(budget)} FCFA</span>
+          </div>
+          <div class="progress"><div class="progress-fill" style="width:${pct}%;background:${cfg.color};"></div></div>
+        </div>
+        <div class="plan-report">
+          <span>Solde disponible</span>
+          <span class="report-val ${solde>=0?'positive':'negative'}">${fmt(Math.abs(solde))} FCFA${solde<0?' ⚠️':''}</span>
+        </div>
+        ${rep>0?`<div style="font-size:11px;color:var(--muted);margin-top:4px;">📤 Report : +${fmt(rep)} FCFA</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Recent DQ
+  const recent=m.depenses.slice(-5).reverse();
+  const el=document.getElementById('dash-recent');
+  if(!recent.length){el.innerHTML=`<div class="text-muted">Aucune dépense enregistrée aujourd'hui.</div>`;return;}
+  el.innerHTML=recent.map(d=>{
+    const cfg=PLAN_CONFIG[d.plan];
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="width:8px;height:32px;border-radius:4px;background:${cfg.color};flex-shrink:0;"></div>
+      <div class="flex-1"><div style="font-size:14px;font-weight:500;">${esc(d.desc)}</div><div class="text-muted">${d.date}</div></div>
+      <div style="font-weight:700;color:${cfg.color};">${fmt(d.amount)} FCFA</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// SYNTHESE
+// ════════════════════════════════════════════════════════════
+function renderSynthese(){
+  let totalRev=0,totalDep=0;
+  for(let mi=0;mi<7;mi++){
+    totalRev+=totalRevenu(mi);
+    totalDep+=PLAN_KEYS.reduce((s,k)=>{
+      const m=state.mois[mi];
+      const dep=k==='dette'?(m.dettes||[]).reduce((s,d)=>s+d.paye,0):(m.items[k]||[]).reduce((s,i)=>s+i.depense,0)+planDepenseDQ(mi,k);
+      return s+dep;
+    },0);
+  }
+  document.getElementById('synth-kpis').innerHTML=`
+    <div class="synth-kpi"><div class="kpi-label">Revenu Total 7 mois</div><div class="kpi-val text-gold">${fmt(totalRev)} FCFA</div></div>
+    <div class="synth-kpi"><div class="kpi-label">Total Dépensé</div><div class="kpi-val text-red">${fmt(totalDep)} FCFA</div></div>
+    <div class="synth-kpi"><div class="kpi-label">Solde Global</div><div class="kpi-val ${totalRev-totalDep>=0?'text-green':'text-red'}">${fmt(totalRev-totalDep)} FCFA</div></div>
+    <div class="synth-kpi"><div class="kpi-label">Mois enregistrés</div><div class="kpi-val">7</div></div>
+  `;
+  const tbl=document.getElementById('synth-table');
+  const headers=['Mois','Revenu',...PLAN_KEYS.map(k=>PLAN_CONFIG[k].icon+' '+PLAN_CONFIG[k].label.replace('Plan ','')),'Total Dép.','Solde'];
+  tbl.innerHTML=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>
+    ${Array.from({length:7},(_,mi)=>{
+      const rev=totalRevenu(mi);
+      const deps=PLAN_KEYS.map(k=>{
+        const m=state.mois[mi];
+        return k==='dette'?(m.dettes||[]).reduce((s,d)=>s+d.paye,0):(m.items[k]||[]).reduce((s,i)=>s+i.depense,0)+planDepenseDQ(mi,k);
+      });
+      const totalD=deps.reduce((s,d)=>s+d,0);
+      const solde=rev-totalD;
+      return `<tr>
+        <td class="mois-name">${MOIS_NAMES[mi]}</td>
+        <td class="num text-gold">${fmt(rev)}</td>
+        ${deps.map((d,i)=>`<td class="num" style="color:${PLAN_CONFIG[PLAN_KEYS[i]].color};">${fmt(d)}</td>`).join('')}
+        <td class="num">${fmt(totalD)}</td>
+        <td class="num ${solde>=0?'pos':'neg'}">${fmt(solde)}</td>
+      </tr>`;
+    }).join('')}
+  </tbody>
+  <tfoot><tr style="background:var(--dark3);font-weight:700;">
+    <td style="padding:10px 14px;">TOTAL</td>
+    <td class="num" style="color:var(--gold);">${fmt(totalRev)}</td>
+    ${PLAN_KEYS.map(k=>{
+      const s=Array.from({length:7},(_,mi)=>{
+        const m=state.mois[mi];
+        return k==='dette'?(m.dettes||[]).reduce((s,d)=>s+d.paye,0):(m.items[k]||[]).reduce((s,i)=>s+i.depense,0)+planDepenseDQ(mi,k);
+      }).reduce((a,b)=>a+b,0);
+      return `<td class="num" style="color:${PLAN_CONFIG[k].color};">${fmt(s)}</td>`;
+    }).join('')}
+    <td class="num">${fmt(totalDep)}</td>
+    <td class="num ${totalRev-totalDep>=0?'pos':'neg'}">${fmt(totalRev-totalDep)}</td>
+  </tr></tfoot>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════════
+function fmt(n){ return Math.round(n||0).toLocaleString('fr-FR'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type==='error'?'error':'')+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('open'); });
+});
+
+// Plan selector updates DQ subcategories
+document.getElementById('dq-plan').addEventListener('change', updateDQSubcat);
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+initDQDate();
+updateDQSubcat();
+renderDashboard();
+</script>
+</body>
+</html>
