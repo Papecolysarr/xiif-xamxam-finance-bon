@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Xiif XamXam — Finances</title>
+<title>Xiif XamXam Finances</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>window._fbReady=new Promise(r=>{window._fbResolve=r;});</script>
@@ -13,7 +13,7 @@
   import{getFirestore,doc,setDoc,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   // COLLE ICI TA CONFIG FIREBASE
   const firebaseConfig={
-     apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
+    apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
   authDomain: "xiif-xamxam.firebaseapp.com",
   projectId: "xiif-xamxam",
   storageBucket: "xiif-xamxam.firebasestorage.app",
@@ -56,7 +56,7 @@ button{cursor:pointer;}
 /* AUTH */
 #au{display:none;min-height:100vh;background:var(--w);align-items:center;justify-content:center;padding:20px;}
 .ac{width:100%;max-width:380px;}
-.abrand{font-size:26px;font-weight:800;color:var(--s9);letter-spacing:-1px;margin-bottom:4px;}
+.abrand{font-size:24px;font-weight:800;color:var(--s9);letter-spacing:-.5px;margin-bottom:4px;}
 .abrand span{color:var(--g);}
 .asub{font-size:14px;color:var(--s5);margin-bottom:28px;}
 .atabs{display:flex;border-bottom:2px solid var(--s2);margin-bottom:24px;}
@@ -78,7 +78,7 @@ button{cursor:pointer;}
 
 /* TOP NAV */
 .tnav{background:var(--w);border-bottom:1px solid var(--s2);display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.04);}
-.tnav-brand{font-size:17px;font-weight:800;color:var(--s9);letter-spacing:-.5px;margin-right:20px;padding:16px 0;white-space:nowrap;flex-shrink:0;}
+.tnav-brand{font-size:14px;font-weight:800;color:var(--s9);letter-spacing:-.3px;margin-right:16px;padding:16px 0;white-space:nowrap;flex-shrink:0;}
 .tnav-brand span{color:var(--g);}
 .tnav-tabs{display:flex;overflow-x:auto;flex:1;}
 .tnav-tabs::-webkit-scrollbar{display:none;}
@@ -284,7 +284,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
 <!-- AUTH -->
 <div id="au">
   <div class="ac">
-    <div class="abrand">Xiif <span>Xam</span>Xam</div>
+    <div class="abrand">Xiif XamXam Finances</div>
     <div class="asub">Plan Financier Personnel</div>
     <div class="atabs">
       <div class="atab on" id="tl" onclick="stab('l')">Se connecter</div>
@@ -310,7 +310,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
   <!-- TOP NAV -->
   <nav class="tnav">
     <button class="hamb" id="hamb" onclick="togSidebar()">☰</button>
-    <div class="tnav-brand">Xiif <span style="color:var(--g);">Xam</span>Xam</div>
+    <div class="tnav-brand">Xiif XamXam Finances</div>
     <div class="tnav-tabs">
       <div class="ntab on" onclick="gp('dashboard')" data-p="dashboard">🏠</div>
       <div class="ntab" onclick="gp('transactions')" data-p="transactions">💳</div>
@@ -371,12 +371,15 @@ input[type=range]{width:100%;accent-color:var(--g);}
   <div class="content">
     <!-- DASHBOARD -->
     <div class="pg on" id="pg-dashboard">
-      <div class="flex aic jb mb4">
+      <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:12px;">
         <div>
           <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;" id="dbtit">Tableau de bord</div>
           <div class="tsm tmu mt2"><span class="sdo" id="sdo"></span>Synchronisé</div>
         </div>
-        <button class="btn bg" onclick="oaTx('revenu')">+ Ajouter revenu</button>
+        <div class="flex gi2 fw">
+          <button class="btn bg" style="padding:11px 20px;font-size:14px;" onclick="oaTx('revenu')">💚 Ajouter un revenu</button>
+          <button class="btn" style="background:var(--rl);color:var(--r);border:1.5px solid var(--rm);padding:11px 20px;font-size:14px;" onclick="oaTx('depense')">🔴 Ajouter une dépense</button>
+        </div>
       </div>
       <div class="kgrid" id="dbkpi"></div>
 
