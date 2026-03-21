@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Xiif XamXam — Finances</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>window._fbReady=new Promise(r=>{window._fbResolve=r;});</script>
 <script type="module">
@@ -93,6 +92,43 @@ button{cursor:pointer;}
 .ubtn:hover{background:var(--s1);}
 .av{width:27px;height:27px;border-radius:50%;background:var(--g);color:var(--w);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
 
+/* SIDEBAR */
+.app-body{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:220px;background:var(--w);border-right:1px solid var(--s2);display:flex;flex-direction:column;flex-shrink:0;height:calc(100vh - 57px);position:sticky;top:57px;overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:4px;}.sidebar::-webkit-scrollbar-thumb{background:var(--s2);border-radius:99px;}
+.snav{flex:1;padding:10px 8px;}
+.sni{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r8);cursor:pointer;font-size:13px;font-weight:600;color:var(--s6);transition:.12s;margin-bottom:2px;}
+.sni:hover{background:var(--s1);color:var(--s8);}
+.sni.on{background:var(--gl);color:var(--g);}
+.sni .ico{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.sni .lbl{flex:1;}
+.sni .badge{font-size:10px;font-weight:700;background:var(--gl);color:var(--g);padding:2px 7px;border-radius:99px;}
+.sdiv{height:1px;background:var(--s2);margin:8px 10px;}
+.sbot{padding:12px 10px;border-top:1px solid var(--s2);}
+.sbot-mois label{font-size:11px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+.sbot select{width:100%;border:1.5px solid var(--s2);border-radius:var(--r8);padding:8px 10px;font-size:13px;font-weight:600;color:var(--s7);outline:none;background:var(--w);}
+.sbot select:focus{border-color:var(--g);}
+.content{flex:1;overflow-y:auto;padding:22px;}
+
+/* SIDEBAR QUICK-ADD BUTTONS */
+.sqadd{padding:10px 10px 6px;}
+.sqadd-title{font-size:11px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.3px;margin-bottom:7px;}
+.sqadd-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.qbtn{border:none;border-radius:var(--r8);padding:8px 6px;font-size:12px;font-weight:700;cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;gap:4px;}
+.qbtn.qg{background:var(--gl);color:var(--g);}.qbtn.qg:hover{background:var(--gm);}
+.qbtn.qr{background:var(--rl);color:var(--r);}.qbtn.qr:hover{background:var(--rm);}
+
+/* Hide top-nav tabs on desktop, show on mobile */
+.tnav-tabs{display:none;}
+@media(max-width:768px){
+  .sidebar{display:none;position:fixed;top:0;left:0;height:100vh;z-index:200;box-shadow:var(--shm);}
+  .sidebar.mob-open{display:flex;}
+  .tnav-tabs{display:flex;}
+  .content{padding:14px;}
+  .hamb{display:flex!important;}
+}
+.hamb{display:none;background:none;border:none;font-size:20px;padding:6px;border-radius:var(--r4);cursor:pointer;color:var(--s7);}
+
 /* MAIN */
 .main{flex:1;padding:22px;max-width:1180px;margin:0 auto;width:100%;}
 
@@ -169,11 +205,7 @@ button{cursor:pointer;}
 .dt tr:hover td{background:var(--s0);}
 .dt tfoot td{padding:10px 11px;font-weight:700;border-top:2px solid var(--s2);background:var(--s0);}
 
-/* CHARTS */
-.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
-@media(max-width:680px){.cgrid{grid-template-columns:1fr;}}
-.ccard{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:16px;box-shadow:var(--sh);}
-.ctit{font-size:13px;font-weight:700;color:var(--s7);margin-bottom:12px;}
+
 
 /* MODAL */
 .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:500;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);}
@@ -275,30 +307,68 @@ input[type=range]{width:100%;accent-color:var(--g);}
 
 <!-- APP -->
 <div id="ap">
+  <!-- TOP NAV -->
   <nav class="tnav">
-    <div class="tnav-brand">Xiif <span>Xam</span>Xam</div>
+    <button class="hamb" id="hamb" onclick="togSidebar()">☰</button>
+    <div class="tnav-brand">Xiif <span style="color:var(--g);">Xam</span>Xam</div>
     <div class="tnav-tabs">
-      <div class="ntab on" onclick="gp('dashboard')" data-p="dashboard">🏠 Accueil</div>
-      <div class="ntab" onclick="gp('transactions')" data-p="transactions">💳 Transactions</div>
-      <div class="ntab" onclick="gp('plans')" data-p="plans">📊 Plans</div>
-      <div class="ntab" onclick="gp('dettes')" data-p="dettes">⚠️ Dettes</div>
-      <div class="ntab" onclick="gp('export')" data-p="export">⬇️ Export</div>
-      <div class="ntab" onclick="gp('param')" data-p="param">⚙️ Paramètres</div>
+      <div class="ntab on" onclick="gp('dashboard')" data-p="dashboard">🏠</div>
+      <div class="ntab" onclick="gp('transactions')" data-p="transactions">💳</div>
+      <div class="ntab" onclick="gp('plans')" data-p="plans">📊</div>
+      <div class="ntab" onclick="gp('dettes')" data-p="dettes">⚠️</div>
+      <div class="ntab" onclick="gp('export')" data-p="export">⬇️</div>
+      <div class="ntab" onclick="gp('param')" data-p="param">⚙️</div>
     </div>
     <div class="tnav-r">
-      <select class="msel" id="msel" onchange="chMois(this.value)">
-        <option value="0">Mars 2026</option><option value="1">Avril 2026</option>
-        <option value="2">Mai 2026</option><option value="3">Juin 2026</option>
-        <option value="4">Juillet 2026</option><option value="5">Août 2026</option>
-        <option value="6">Septembre 2026</option>
-      </select>
       <button class="ubtn" onclick="doLogout()">
         <div class="av" id="uav">?</div><span id="unm">…</span><span style="color:var(--s4);">⏻</span>
       </button>
     </div>
   </nav>
 
-  <div class="main">
+  <!-- APP BODY = SIDEBAR + CONTENT -->
+  <div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sqadd">
+      <div class="sqadd-title">Ajouter rapidement</div>
+      <div class="sqadd-btns">
+        <button class="qbtn qg" onclick="oaTx('revenu')">+ Revenu</button>
+        <button class="qbtn qr" onclick="oaTx('depense')">+ Dépense</button>
+      </div>
+    </div>
+    <div class="sdiv"></div>
+    <nav class="snav">
+      <div class="sni on" onclick="gp('dashboard')" data-p="dashboard"><span class="ico">🏠</span><span class="lbl">Tableau de bord</span></div>
+      <div class="sni" onclick="gp('transactions')" data-p="transactions"><span class="ico">💳</span><span class="lbl">Transactions</span></div>
+      <div class="sdiv"></div>
+      <div style="padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--s4);text-transform:uppercase;letter-spacing:.5px;">Plans</div>
+      <div class="sni" onclick="gp('plans')" data-p="plans"><span class="ico">📊</span><span class="lbl">Tous les plans</span></div>
+      <div class="sni" onclick="gp('don')" data-p="don"><span class="ico">🤲</span><span class="lbl">Plan Don</span><span class="badge" id="sb-don">10%</span></div>
+      <div class="sni" onclick="gp('epargne')" data-p="epargne"><span class="ico">💳</span><span class="lbl">Plan Épargne</span><span class="badge" id="sb-ep">10%</span></div>
+      <div class="sni" onclick="gp('invest')" data-p="invest"><span class="ico">📈</span><span class="lbl">Investissement</span><span class="badge" id="sb-inv">5%</span></div>
+      <div class="sni" onclick="gp('dettes')" data-p="dettes"><span class="ico">⚠️</span><span class="lbl">Dettes</span><span class="badge" id="sb-det">10%</span></div>
+      <div class="sni" onclick="gp('conso')" data-p="conso"><span class="ico">🛒</span><span class="lbl">Consommation</span><span class="badge" id="sb-con">65%</span></div>
+      <div class="sdiv"></div>
+      <div class="sni" onclick="gp('export')" data-p="export"><span class="ico">⬇️</span><span class="lbl">Export Excel</span></div>
+      <div class="sni" onclick="gp('param')" data-p="param"><span class="ico">⚙️</span><span class="lbl">Paramètres</span></div>
+    </nav>
+    <div class="sbot">
+      <div class="sbot-mois">
+        <label><span class="sdo" id="sdo"></span>Mois actif</label>
+        <select id="msel" onchange="chMois(this.value)">
+          <option value="0">Mars 2026</option><option value="1">Avril 2026</option>
+          <option value="2">Mai 2026</option><option value="3">Juin 2026</option>
+          <option value="4">Juillet 2026</option><option value="5">Août 2026</option>
+          <option value="6">Septembre 2026</option>
+        </select>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
     <!-- DASHBOARD -->
     <div class="pg on" id="pg-dashboard">
       <div class="flex aic jb mb4">
@@ -309,10 +379,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
         <button class="btn bg" onclick="oaTx('revenu')">+ Ajouter revenu</button>
       </div>
       <div class="kgrid" id="dbkpi"></div>
-      <div class="cgrid">
-        <div class="ccard"><div class="ctit">Revenus vs Dépenses</div><canvas id="cbar" height="190"></canvas></div>
-        <div class="ccard"><div class="ctit">Répartition par plan</div><canvas id="cpie" height="190"></canvas></div>
-      </div>
+
       <div class="prow" id="dbplans"></div>
       <div class="card">
         <div class="flex aic jb mb3">
@@ -391,14 +458,48 @@ input[type=range]{width:100%;accent-color:var(--g);}
       </div>
     </div>
 
+    <!-- PLAN DON (sidebar shortcut) -->
+    <div class="pg" id="pg-don">
+      <div class="flex aic jb mb4">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">🤲 Plan Don</div>
+        <button class="btn bg" onclick="oaTx('depense');sv('txpl','don');upSubOpts()">+ Dépense Don</button>
+      </div>
+      <div id="plc-don"></div>
+    </div>
+    <!-- PLAN EPARGNE -->
+    <div class="pg" id="pg-epargne">
+      <div class="flex aic jb mb4">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">💳 Plan Épargne</div>
+        <button class="btn bg" onclick="oaTx('depense');sv('txpl','epargne');upSubOpts()">+ Dépense Épargne</button>
+      </div>
+      <div id="plc-epargne"></div>
+    </div>
+    <!-- PLAN INVEST -->
+    <div class="pg" id="pg-invest">
+      <div class="flex aic jb mb4">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">📈 Plan Investissement</div>
+        <button class="btn bg" onclick="oaTx('depense');sv('txpl','invest');upSubOpts()">+ Dépense Invest.</button>
+      </div>
+      <div id="plc-invest"></div>
+    </div>
+    <!-- PLAN CONSO -->
+    <div class="pg" id="pg-conso">
+      <div class="flex aic jb mb4">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">🛒 Plan Consommation</div>
+        <button class="btn bg" onclick="oaTx('depense');sv('txpl','conso');upSubOpts()">+ Dépense Conso.</button>
+      </div>
+      <div id="plc-conso"></div>
+    </div>
+
     <!-- PARAM -->
     <div class="pg" id="pg-param">
       <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;">Paramètres</div>
       <p class="tsm tmu mb4">Le total de tous les plans doit être égal à 100%.</p>
       <div id="parc"></div>
     </div>
-  </div>
-</div>
+  </div><!-- /content -->
+  </div><!-- /app-body -->
+</div><!-- /ap -->
 
 <!-- MODAL TX -->
 <div class="ov" id="ov-tx">
@@ -510,7 +611,6 @@ const DI={
 let S=null,mi=0,cp='dashboard',cu=null,stmr=null;
 let txTab='tout',exPer='mois',exPl='all';
 let eTxId=null,eDtId=null,pDtId=null,undo=null;
-let cBar=null,cPie=null;
 
 function dM(){return{revenus:[],items:Object.fromEntries(PK.map(k=>[k,(DI[k]||[]).map(n=>({id:ui(),name:n,bp:0,dep:0}))])),dettes:[],depenses:[]};}
 function dS(){return{mois:Array.from({length:7},()=>dM()),par:{}};}
@@ -570,7 +670,7 @@ async function ldData(uid){
     document.getElementById('unm').textContent=cu.displayName||cu.email.split('@')[0];
     document.getElementById('txdt').value=td();
     document.getElementById('pdat').value=td();
-    showScreen('app');rp('dashboard');
+    showScreen('app');updSidebarBadges();rp('dashboard');
   }catch(ex){sErr('Erreur : '+ex.message);showScreen('auth');}
 }
 
@@ -610,17 +710,22 @@ function aTx(i){
 function gp(p){
   cp=p;
   document.querySelectorAll('.pg').forEach(e=>e.classList.remove('on'));
-  document.querySelectorAll('.ntab').forEach(e=>e.classList.remove('on'));
-  document.getElementById('pg-'+p).classList.add('on');
+  document.querySelectorAll('.ntab,.sni').forEach(e=>e.classList.remove('on'));
+  document.getElementById('pg-'+p)?.classList.add('on');
   document.querySelector(`.ntab[data-p="${p}"]`)?.classList.add('on');
+  document.querySelector(`.sni[data-p="${p}"]`)?.classList.add('on');
+  // Close sidebar on mobile after nav
+  if(window.innerWidth<=768) document.getElementById('sidebar')?.classList.remove('mob-open');
   rp(p);
 }
+function togSidebar(){document.getElementById('sidebar')?.classList.toggle('mob-open');}
 function chMois(v){mi=parseInt(v);rp(cp);}
 function rp(p){
   if(!S)return;
   if(p==='dashboard')rDash();
   else if(p==='transactions')rTx();
   else if(p==='plans')rPlans();
+  else if(p==='don'||p==='epargne'||p==='invest'||p==='conso')rPlanSingle(p);
   else if(p==='dettes')rDettes();
   else if(p==='export')rExp();
   else if(p==='param')rParam();
@@ -652,28 +757,13 @@ function rDash(){
       <div class="pcs" style="color:${PC[k].co};">Solde : ${f(s)} FCFA</div>
     </div>`;
   }).join('');
-  rCharts();
+  updSidebarBadges();
   const rec=aTx(mi).slice(0,7);
   const el=document.getElementById('dbrec');
   if(!rec.length){el.innerHTML='<div class="est"><div class="eico">💳</div><p>Aucune transaction.</p></div>';return;}
   el.innerHTML='<div class="txl">'+rec.map(tx=>txH(tx,false)).join('')+'</div>';
 }
 
-function rCharts(){
-  const lb=MN.map(m=>m.split(' ')[0]);
-  const rv=Array.from({length:7},(_,i)=>tRev(i));
-  const dp=Array.from({length:7},(_,i)=>PK.reduce((s,k)=>s+pDep(i,k),0));
-  const cb=document.getElementById('cbar');
-  if(cBar)cBar.destroy();
-  cBar=new Chart(cb,{type:'bar',data:{labels:lb,datasets:[
-    {label:'Revenus',data:rv,backgroundColor:'#BBF7D0',borderColor:'#16A34A',borderWidth:1.5,borderRadius:5},
-    {label:'Dépenses',data:dp,backgroundColor:'#FECACA',borderColor:'#DC2626',borderWidth:1.5,borderRadius:5}
-  ]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{family:'Plus Jakarta Sans',size:11}}}},scales:{y:{ticks:{callback:v=>f(v),font:{family:'Plus Jakarta Sans',size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{family:'Plus Jakarta Sans',size:10}}}}}});
-  const pd=PK.map(k=>pDep(mi,k));
-  const cp2=document.getElementById('cpie');
-  if(cPie)cPie.destroy();
-  cPie=new Chart(cp2,{type:'doughnut',data:{labels:PK.map(k=>PC[k].lb.replace('Plan ','')),datasets:[{data:pd,backgroundColor:PK.map(k=>PC[k].bg),borderColor:PK.map(k=>PC[k].co),borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{family:'Plus Jakarta Sans',size:11},padding:7}}},cutout:'60%'}});
-}
 
 // ═══════════════════════════════════════════
 // TRANSACTIONS
@@ -982,6 +1072,46 @@ function savPar(){
   sch();toast('Paramètres enregistrés ✓','sg');rParam();
 }
 function resPar(){if(!S.par)S.par={};PK.forEach(k=>{S.par[k]=DP[k];});sch();toast('Réinitialisé ✓','sg');rParam();}
+
+function updSidebarBadges(){
+  if(!S)return;
+  const map={don:'sb-don',epargne:'sb-ep',invest:'sb-inv',dette:'sb-det',conso:'sb-con'};
+  PK.forEach(k=>{
+    const el=document.getElementById(map[k]);
+    if(el)el.textContent=Math.round(gp2(k)*100)+'%';
+  });
+}
+
+function rPlanSingle(k){
+  // Reuse rPlans logic but only for one plan
+  const el=document.getElementById('plc-'+k);
+  if(!el)return;
+  const m=M(),b=bgt(mi,k),d=pDep(mi,k),s=b-d,p=b>0?Math.min(100,d/b*100):0,rep=gRep(mi,k);
+  const items=m.items[k]||[];
+  el.innerHTML=`<div class="card" style="border-left:4px solid ${PC[k].co};">
+    <div class="flex aic jb mb3">
+      <div class="flex aic gi2">
+        <span style="font-size:13px;font-weight:700;color:var(--s5);">Budget : <strong>${f(b)} FCFA</strong></span>
+        <span class="bge ${s>=0?'bgg':'bgr'}">${s>=0?'+':''}${f(s)} FCFA</span>
+      </div>
+    </div>
+    <div class="prog" style="background:var(--s1);height:7px;margin-bottom:9px;"><div class="progt" style="width:${p}%;background:${PC[k].co};"></div></div>
+    <div style="font-size:12px;color:var(--s5);margin-bottom:13px;">${f(d)} FCFA dépensé · ${p.toFixed(0)}%${rep>0?` · <span style="color:${PC[k].co};">Report +${f(rep)} FCFA</span>`:''}</div>
+    <div class="scx"><table class="dt">
+      <thead><tr><th>Désignation</th><th style="text-align:right;width:130px;">Budget prévu</th><th style="text-align:right;width:130px;">Dépensé</th><th style="text-align:right;width:90px;">Écart</th><th style="width:32px;"></th></tr></thead>
+      <tbody>${items.map(it=>{const e=it.bp-it.dep;return`<tr>
+        <td><input style="border:none;background:transparent;font-size:13px;color:var(--s8);width:100%;outline:none;font-family:var(--font);" value="${es(it.name)}" onchange="uIN('${k}','${it.id}',this.value)"/></td>
+        <td style="text-align:right;"><input type="number" min="0" value="${it.bp||''}" placeholder="0" style="border:1.5px solid var(--s2);border-radius:6px;padding:5px 8px;font-size:13px;width:110px;text-align:right;outline:none;font-family:var(--font);" onchange="uIB('${k}','${it.id}',this.value)"/></td>
+        <td style="text-align:right;"><input type="number" min="0" value="${it.dep||''}" placeholder="0" style="border:1.5px solid var(--s2);border-radius:6px;padding:5px 8px;font-size:13px;width:110px;text-align:right;outline:none;font-family:var(--font);color:${it.dep>0?PC[k].co:'inherit'};" onchange="uID('${k}','${it.id}',this.value)"/></td>
+        <td style="text-align:right;font-weight:700;color:${e>=0?'var(--g)':'var(--r)'};">${it.bp>0||it.dep>0?f(e):'—'}</td>
+        <td><button class="bico dl" onclick="cDelIt('${k}','${it.id}','${es(it.name)}')">🗑️</button></td>
+      </tr>`}).join('')}</tbody>
+      <tfoot><tr><td>TOTAL</td><td style="text-align:right;">${f(items.reduce((s,i)=>s+i.bp,0))} FCFA</td><td style="text-align:right;color:${PC[k].co};">${f(d)} FCFA</td><td style="text-align:right;color:${s>=0?'var(--g)':'var(--r)'};">${f(s)} FCFA</td><td></td></tr></tfoot>
+    </table></div>
+    <button class="btn bo bsm mt3" onclick="aIt('${k}')">+ Ajouter ligne</button>
+  </div>`;
+  updSidebarBadges();
+}
 
 // ═══════════════════════════════════════════
 // UTILS
