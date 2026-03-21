@@ -113,7 +113,7 @@ button{cursor:pointer;}
 /* SIDEBAR QUICK-ADD BUTTONS */
 .sqadd{padding:10px 10px 6px;}
 .sqadd-title{font-size:11px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.3px;margin-bottom:7px;}
-.sqadd-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.sqadd-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;}.qbtn-full{grid-column:span 2;}
 .qbtn{border:none;border-radius:var(--r8);padding:8px 6px;font-size:12px;font-weight:700;cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;gap:4px;}
 .qbtn.qg{background:var(--gl);color:var(--g);}.qbtn.qg:hover{background:var(--gm);}
 .qbtn.qr{background:var(--rl);color:var(--r);}.qbtn.qr:hover{background:var(--rm);}
@@ -336,6 +336,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
       <div class="sqadd-btns">
         <button class="qbtn qg" onclick="oaTx('revenu')">+ Revenu</button>
         <button class="qbtn qr" onclick="oaTx('depense')">+ Dépense</button>
+        <button class="qbtn" style="background:var(--al);color:var(--am);grid-column:span 2;" onclick="oaNouvDette()">⚠️ Contracter une dette</button>
       </div>
     </div>
     <div class="sdiv"></div>
@@ -379,6 +380,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
         <div class="flex gi2 fw">
           <button class="btn bg" style="padding:11px 20px;font-size:14px;" onclick="oaTx('revenu')">💚 Ajouter un revenu</button>
           <button class="btn" style="background:var(--rl);color:var(--r);border:1.5px solid var(--rm);padding:11px 20px;font-size:14px;" onclick="oaTx('depense')">🔴 Ajouter une dépense</button>
+          <button class="btn" style="background:var(--al);color:var(--am);border:1.5px solid #FDE68A;padding:11px 20px;font-size:14px;" onclick="oaNouvDette()">⚠️ Contracter une dette</button>
         </div>
       </div>
       <div class="kgrid" id="dbkpi"></div>
@@ -537,16 +539,58 @@ input[type=range]{width:100%;accent-color:var(--g);}
   </div>
 </div>
 
-<!-- MODAL DETTE -->
+<!-- MODAL CONTRACTER UNE DETTE -->
+<div class="ov" id="ov-nouv-dette">
+  <div class="mo">
+    <h2>⚠️ Contracter une dette</h2>
+    <div class="mof">
+      <div class="fl"><label>Type de dette</label>
+        <select id="nd-type" onchange="updNDType()">
+          <option value="argent">💰 Dette en argent</option>
+          <option value="nature">📦 Dette en nature (objet / service)</option>
+        </select>
+      </div>
+      <div class="fl"><label>Créancier (nom de la personne)</label><input id="nd-crea" placeholder="Ex: Amadou Ba, BOA, Famille…"/></div>
+      <div class="fl" id="nd-montant-field"><label>Montant reçu (FCFA)</label><input id="nd-mont" type="number" placeholder="100000" min="1"/></div>
+      <div class="fl" id="nd-nature-field" style="display:none;"><label>Description (objet / service)</label><input id="nd-desc" placeholder="Ex: Sac de riz 50kg, Véhicule prêté…"/></div>
+      <div class="fl" id="nd-valeur-field" style="display:none;"><label>Valeur estimée (FCFA)</label><input id="nd-val" type="number" placeholder="25000" min="0"/></div>
+      <div class="fl"><label>Date de contraction</label><input id="nd-date" type="date"/></div>
+      <div class="fl"><label>Date limite de remboursement</label><input id="nd-dlim" type="date"/></div>
+      <div class="fl"><label>Mensualité prévue (FCFA)</label><input id="nd-mens" type="number" placeholder="20000" value="0"/></div>
+      <div class="fl"><label>Note / Contexte</label><input id="nd-note" placeholder="Conditions, accord verbal…"/></div>
+      <div id="nd-revenu-opt" style="background:var(--gl);border:1px solid var(--gm);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="nd-add-rev" checked style="margin-top:2px;accent-color:var(--g);width:16px;height:16px;flex-shrink:0;"/>
+        <label for="nd-add-rev" style="font-size:13px;font-weight:600;color:var(--g);cursor:pointer;line-height:1.4;">
+          Ajouter ce montant aux revenus du mois<br>
+          <span style="font-weight:400;color:var(--s6);">La somme sera répartie dans tes 5 plans automatiquement</span>
+        </label>
+      </div>
+    </div>
+    <div class="moa">
+      <button class="btn bo" onclick="cov('ov-nouv-dette')">Annuler</button>
+      <button class="btn bg" onclick="savNouvDette()">Enregistrer la dette</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETTE (modifier créancier existant) -->
 <div class="ov" id="ov-dette">
   <div class="mo">
-    <h2 id="dmot">Ajouter un créancier</h2>
+    <h2 id="dmot">Modifier le créancier</h2>
     <div class="mof">
       <div class="fl"><label>Nom du créancier</label><input id="dnom" placeholder="Ex: Amadou Ba, BOA…"/></div>
-      <div class="fl"><label>Montant total (FCFA)</label><input id="dtot" type="number" placeholder="150000"/></div>
-      <div class="fl"><label>Déjà payé (FCFA)</label><input id="dpay" type="number" value="0"/></div>
+      <div class="fl"><label>Type</label>
+        <select id="dtyp">
+          <option value="argent">💰 Dette en argent</option>
+          <option value="nature">📦 Dette en nature</option>
+        </select>
+      </div>
+      <div class="fl"><label>Description (si nature)</label><input id="ddesc" placeholder="Objet / service…"/></div>
+      <div class="fl"><label>Montant / Valeur totale (FCFA)</label><input id="dtot" type="number" placeholder="150000"/></div>
+      <div class="fl"><label>Déjà remboursé (FCFA)</label><input id="dpay" type="number" value="0"/></div>
+      <div class="fl"><label>Date limite remboursement</label><input id="ddlim" type="date"/></div>
       <div class="fl"><label>Mensualité prévue (FCFA)</label><input id="dmen" type="number" value="0"/></div>
-      <div class="fl"><label>Note</label><input id="dnot" placeholder="Date limite…"/></div>
+      <div class="fl"><label>Note</label><input id="dnot" placeholder="Conditions, accord…"/></div>
     </div>
     <div class="moa">
       <button class="btn bo" onclick="cov('ov-dette')">Annuler</button>
@@ -933,24 +977,33 @@ function rDettes(){
   if(!(m.dettes||[]).length){el.innerHTML=sum+'<div class="est"><div class="eico">✅</div><p>Aucune dette enregistrée.</p></div>';return;}
   const cards=(m.dettes||[]).map(d=>{
     const rs=d.total-d.paye,pp=d.total>0?Math.min(100,d.paye/d.total*100):0;
+    const isNat=d.type==='nature';
+    const badge=isNat
+      ?`<span class="bge bga">📦 Nature</span>`
+      :`<span class="bge bgb">💰 Argent</span>`;
+    const dlimStr=d.dlim?`<div class="dr"><span class="dl2">Échéance</span><span class="dv2" style="color:${new Date(d.dlim)<new Date()?'var(--r)':'var(--am)'};">${d.dlim}</span></div>`:'';
     return`<div class="dc ${pp>=100?'ok':''}">
       <div class="flex aic jb mb3">
-        <div class="dcn">${es(d.nom)}</div>
+        <div>
+          <div class="dcn">${es(d.nom)}</div>
+          <div class="flex gi2 mt2">${badge}${isNat&&d.desc?`<span class="bge bgs">${es(d.desc)}</span>`:''}</div>
+        </div>
         <div class="flex gi2">
           <button class="bico ed" onclick="oDette('${d.id}')">✏️</button>
           <button class="bico dl" onclick="cDelD('${d.id}','${es(d.nom)}')">🗑️</button>
         </div>
       </div>
-      <div class="dr"><span class="dl2">Total</span><span class="dv2">${f(d.total)} FCFA</span></div>
-      <div class="dr"><span class="dl2">Avances payées</span><span class="dv2 tg">${f(d.paye)} FCFA</span></div>
-      <div class="dr"><span class="dl2">Reste à payer</span><span class="dv2 tr" style="font-size:15px;">${f(rs)} FCFA</span></div>
+      <div class="dr"><span class="dl2">${isNat?'Valeur estimée':'Montant total'}</span><span class="dv2">${f(d.total)} FCFA</span></div>
+      <div class="dr"><span class="dl2">Remboursé</span><span class="dv2 tg">${f(d.paye)} FCFA</span></div>
+      <div class="dr"><span class="dl2">Reste</span><span class="dv2 tr" style="font-size:15px;">${f(rs)} FCFA</span></div>
+      ${dlimStr}
       ${d.mens>0?`<div class="dr"><span class="dl2">Mensualité</span><span class="dv2">${f(d.mens)} FCFA</span></div>`:''}
-      ${d.note?`<div class="txs tmu mt2">${es(d.note)}</div>`:''}
+      ${d.note?`<div class="txs tmu mt2">📝 ${es(d.note)}</div>`:''}
       <div class="mt3">
-        <div class="flex jb txs tmu mb3"><span>Progression</span><span>${pp.toFixed(0)}%</span></div>
+        <div class="flex jb txs tmu mb3"><span>Progression remboursement</span><span>${pp.toFixed(0)}%</span></div>
         <div class="prog" style="background:var(--s1);height:7px;"><div class="progt" style="width:${pp}%;background:${pp>=100?'var(--g)':'var(--r)'};"></div></div>
       </div>
-      ${pp>=100?'<div class="tsm fb tg mt3 text-center">✅ Soldée !</div>':`<button class="btn bg bsm mt3" style="width:100%;justify-content:center;" onclick="oPaie('${d.id}')">💸 Paiement</button>`}
+      ${pp>=100?'<div class="tsm fb tg mt3" style="text-align:center;">✅ Dette soldée !</div>':`<button class="btn bg bsm mt3" style="width:100%;justify-content:center;" onclick="oPaie('${d.id}')">💸 Enregistrer paiement</button>`}
     </div>`;
   }).join('');
   el.innerHTML=sum+`<div class="dgrid">${cards}</div>`;
@@ -958,15 +1011,18 @@ function rDettes(){
 function oaDette(){eDtId=null;['dnom','dtot','dnot'].forEach(id=>sv(id,''));sv('dpay','0');sv('dmen','0');document.getElementById('dmot').textContent='Ajouter un créancier';ov('ov-dette');}
 function oDette(id){
   eDtId=id;const d=M().dettes.find(x=>x.id===id);if(!d)return;
-  sv('dnom',d.nom);sv('dtot',d.total);sv('dpay',d.paye);sv('dmen',d.mens);sv('dnot',d.note||'');
+  sv('dnom',d.nom);sv('dtyp',d.type||'argent');sv('ddesc',d.desc||'');
+  sv('dtot',d.total);sv('dpay',d.paye);sv('ddlim',d.dlim||'');
+  sv('dmen',d.mens);sv('dnot',d.note||'');
   document.getElementById('dmot').textContent='Modifier le créancier';ov('ov-dette');
 }
 async function savDette(){
-  const nm=g('dnom'),tot=parseFloat(g('dtot'))||0,pay=parseFloat(g('dpay'))||0,men=parseFloat(g('dmen'))||0,not=g('dnot');
+  const nm=g('dnom'),tp=g('dtyp')||'argent',desc=g('ddesc')||'',tot=parseFloat(g('dtot'))||0,
+        pay=parseFloat(g('dpay'))||0,dlim=g('ddlim')||'',men=parseFloat(g('dmen'))||0,not=g('dnot');
   if(!nm||!tot){toast('Nom et montant requis','er');return;}
   const m=M();if(!m.dettes)m.dettes=[];
-  if(eDtId){const d=m.dettes.find(x=>x.id===eDtId);if(d)Object.assign(d,{nom:nm,total:tot,paye:pay,mens:men,note:not});}
-  else m.dettes.push({id:ui(),nom:nm,total:tot,paye:pay,mens:men,note:not,hist:[]});
+  if(eDtId){const d=m.dettes.find(x=>x.id===eDtId);if(d)Object.assign(d,{nom:nm,type:tp,desc,total:tot,paye:pay,dlim,mens:men,note:not});}
+  else m.dettes.push({id:ui(),nom:nm,type:tp,desc,total:tot,paye:pay,dlim,mens:men,note:not,hist:[]});
   cov('ov-dette');sch();rDettes();toast('Créancier enregistré ✓','sg');
 }
 function cDelD(id,nm){
@@ -1075,6 +1131,55 @@ function savPar(){
   sch();toast('Paramètres enregistrés ✓','sg');rParam();
 }
 function resPar(){if(!S.par)S.par={};PK.forEach(k=>{S.par[k]=DP[k];});sch();toast('Réinitialisé ✓','sg');rParam();}
+
+function oaNouvDette(){
+  sv('nd-type','argent');sv('nd-crea','');sv('nd-mont','');sv('nd-desc','');sv('nd-val','');
+  sv('nd-date',td());sv('nd-dlim','');sv('nd-mens','0');sv('nd-note','');
+  document.getElementById('nd-add-rev').checked=true;
+  updNDType();
+  ov('ov-nouv-dette');
+}
+
+function updNDType(){
+  const t=g('nd-type');
+  const isN=t==='nature';
+  document.getElementById('nd-montant-field').style.display=isN?'none':'block';
+  document.getElementById('nd-nature-field').style.display=isN?'block':'none';
+  document.getElementById('nd-valeur-field').style.display=isN?'block':'none';
+  document.getElementById('nd-revenu-opt').style.display=isN?'none':'flex';
+}
+
+async function savNouvDette(){
+  const tp=g('nd-type'),crea=g('nd-crea'),mont=parseFloat(g('nd-mont'))||0;
+  const desc=g('nd-desc'),val=parseFloat(g('nd-val'))||0,date=g('nd-date');
+  const dlim=g('nd-dlim'),mens=parseFloat(g('nd-mens'))||0,note=g('nd-note');
+  const addRev=document.getElementById('nd-add-rev')?.checked;
+  if(!crea){toast('Nom du créancier requis','er');return;}
+  if(tp==='argent'&&(!mont||mont<1)){toast('Montant requis','er');return;}
+  if(tp==='nature'&&!desc){toast('Description requise','er');return;}
+  const total=tp==='argent'?mont:val;
+  const m=M();
+  if(!m.dettes)m.dettes=[];
+  // Create the debt record
+  m.dettes.push({
+    id:ui(),nom:crea,type:tp,desc:tp==='nature'?desc:'',
+    total,paye:0,dlim,mens,note,
+    dateContraction:date,hist:[]
+  });
+  // If argent + user wants it added to revenue
+  if(tp==='argent'&&addRev&&mont>0){
+    m.revenus.push({
+      id:ui(),source:'Dette reçue — '+crea,amount:mont,date,
+      note:'Debt: '+note,isDette:true
+    });
+    toast('Dette enregistrée + '+f(mont)+' FCFA ajoutés aux revenus ✓','sg');
+  } else {
+    toast('Dette enregistrée ✓','sg');
+  }
+  cov('ov-nouv-dette');sch();
+  // Navigate to dettes page
+  gp('dettes');
+}
 
 function updSidebarBadges(){
   if(!S)return;
