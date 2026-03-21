@@ -790,7 +790,7 @@ function rDash(){
   document.getElementById('dbkpi').innerHTML=`
     <div class="kpi kg"><div class="kl">Revenus du mois</div><div class="kv">${f(rev)}</div><div class="ks">FCFA</div></div>
     <div class="kpi kr"><div class="kl">Dépenses du mois</div><div class="kv">${f(tdp)}</div><div class="ks">FCFA</div></div>
-    <div class="kpi" style="border-left:4px solid ${sol>=0?'var(--g)':'var(--r)'};">=0?'kg':'kr'}"><div class="kl">Solde du mois</div><div class="kv">${f(sol)}</div><div class="ks">FCFA</div></div>
+    <div class="kpi" style="border-left:4px solid ${sol>=0?'var(--g)':'var(--r)'}; color:${sol>=0?'var(--g)':'var(--r)'}"><div class="kl">Solde du mois</div><div class="kv" style="color:${sol>=0?'var(--g)':'var(--r)'}">${f(sol)}</div><div class="ks">FCFA</div></div>
     <div class="kpi kg"><div class="kl">Revenus aujourd'hui</div><div class="kv">${f(rt)}</div><div class="ks">FCFA</div></div>
     <div class="kpi kr"><div class="kl">Dépenses aujourd'hui</div><div class="kv">${f(dt2)}</div><div class="ks">FCFA</div></div>
     <div class="kpi kb"><div class="kl">Épargne</div><div class="kv">${f(pDep(mi,'epargne'))}</div><div class="ks">FCFA</div></div>
