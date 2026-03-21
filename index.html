@@ -969,39 +969,10 @@ function cDelIt(k,id,nm){
 function rDettes(){
   const m=M(),b=bgt(mi,'dette'),rep=gRep(mi,'dette'),tp=(m.dettes||[]).reduce((s,d)=>s+d.paye,0),sol=b-tp;
   const el=document.getElementById('detc');
-  const totalDues=(m.dettes||[]).reduce((s,d)=>s+(d.total-d.paye),0);
-  const totalDettes=(m.dettes||[]).reduce((s,d)=>s+d.total,0);
-  const sum=`<div class="kgrid mb4">
-    <div class="kpi kr" style="border-left:4px solid var(--r);">
-      <div class="kl">Total dettes dues</div>
-      <div class="kv">${f(totalDues)}</div>
-      <div class="ks">FCFA restants à rembourser</div>
-    </div>
-    <div class="kpi" style="border-left:4px solid var(--am);">
-      <div class="kl">Total contracté</div>
-      <div class="kv" style="color:var(--am);">${f(totalDettes)}</div>
-      <div class="ks">FCFA au total</div>
-    </div>
-    <div class="kpi kg" style="border-left:4px solid var(--g);">
-      <div class="kl">Total remboursé</div>
-      <div class="kv">${f(tp)}</div>
-      <div class="ks">FCFA payés</div>
-    </div>
-    <div class="kpi kb" style="border-left:4px solid var(--b);">
-      <div class="kl">Budget remboursement</div>
-      <div class="kv">${f(b)}</div>
-      <div class="ks">FCFA ce mois${rep>0?\` · Report +${f(rep)}\`:''}</div>
-    </div>
-    <div class="kpi ${sol>=0?'kg':'kr'}" style="border-left:4px solid ${sol>=0?'var(--g)':'var(--r)';}">
-      <div class="kl">Solde disponible</div>
-      <div class="kv">${f(sol)}</div>
-      <div class="ks">FCFA ce mois</div>
-    </div>
-    <div class="kpi" style="border-left:4px solid var(--pu);">
-      <div class="kl">Nombre de dettes</div>
-      <div class="kv" style="color:var(--pu);">${(m.dettes||[]).length}</div>
-      <div class="ks">${(m.dettes||[]).filter(d=>d.total-d.paye<=0).length} soldée(s)</div>
-    </div>
+  const sum=`<div class="kgrid mb4" style="grid-template-columns:repeat(3,1fr);">
+    <div class="kpi kb"><div class="kl">Budget dettes</div><div class="kv">${f(b)}</div><div class="ks">FCFA${rep>0?` · Rep. +${f(rep)}`:''}</div></div>
+    <div class="kpi kr"><div class="kl">Total payé</div><div class="kv">${f(tp)}</div><div class="ks">FCFA</div></div>
+    <div class="kpi ${sol>=0?'kg':'kr'}"><div class="kl">Solde</div><div class="kv">${f(sol)}</div><div class="ks">FCFA</div></div>
   </div>`;
   if(!(m.dettes||[]).length){el.innerHTML=sum+'<div class="est"><div class="eico">✅</div><p>Aucune dette enregistrée.</p></div>';return;}
   const cards=(m.dettes||[]).map(d=>{
@@ -1033,17 +1004,6 @@ function rDettes(){
         <div class="prog" style="background:var(--s1);height:7px;"><div class="progt" style="width:${pp}%;background:${pp>=100?'var(--g)':'var(--r)'};"></div></div>
       </div>
       ${pp>=100?'<div class="tsm fb tg mt3" style="text-align:center;">✅ Dette soldée !</div>':`<button class="btn bg bsm mt3" style="width:100%;justify-content:center;" onclick="oPaie('${d.id}')">💸 Enregistrer paiement</button>`}
-      ${(d.hist||[]).length>0?`
-      <div style="margin-top:10px;border-top:1px solid var(--s2);padding-top:10px;">
-        <div class="txs tmu mb3">Historique des paiements</div>
-        ${(d.hist||[]).slice(-3).reverse().map(h=>`
-        <div class="flex jb" style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--s1);">
-          <span style="color:var(--s6);">${h.date}</span>
-          <span style="font-weight:700;color:var(--g);">-${f(h.amount)} FCFA</span>
-        </div>`).join('')}
-        ${(d.hist||[]).length>3?`<div class="txs tmu mt2">${(d.hist||[]).length-3} paiement(s) plus ancien(s)…</div>`:''}
-      </div>`:''
-      }
     </div>`;
   }).join('');
   el.innerHTML=sum+`<div class="dgrid">${cards}</div>`;
@@ -1079,25 +1039,8 @@ async function savPaie(){
   const am=parseFloat(g('pamt'))||0,dt=g('pdat');
   if(!am){toast('Montant requis','er');return;}
   const d=M().dettes.find(x=>x.id===pDtId);if(!d)return;
-  // Update debt paid amount
-  d.paye=Math.min(d.total,d.paye+am);
-  d.hist=d.hist||[];
-  d.hist.push({date:dt,amount:am});
-  // Also record as a depense in plan "dette"
-  const m=M();
-  if(!m.depenses)m.depenses=[];
-  m.depenses.push({
-    id:ui(),
-    desc:'Remboursement — '+d.nom,
-    amount:am,
-    date:dt,
-    plan:'dette',
-    subcat:d.nom,
-    note:'Paiement dette ('+( d.type==='nature'?'nature':'argent' )+')',
-    isDettePaie:true
-  });
-  cov('ov-paie');sch();rDettes();
-  toast(`💸 ${f(am)} FCFA payés — enregistré dans les dépenses ✓`,'sg');
+  d.paye=Math.min(d.total,d.paye+am);d.hist=d.hist||[];d.hist.push({date:dt,amount:am});
+  cov('ov-paie');sch();rDettes();toast(`Paiement ${f(am)} FCFA ✓`,'sg');
 }
 
 // ═══════════════════════════════════════════
