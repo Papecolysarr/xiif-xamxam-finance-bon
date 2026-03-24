@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xiif XamXam Finances</title>
+    <title>Xiif XamXam Finances - V2</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+        // CONFIGURATION FIREBASE (Ta config d'origine)
         const firebaseConfig = {
             apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
             authDomain: "xiif-xamxam.firebaseapp.com",
@@ -24,151 +26,206 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- Logique simplifiée demandée ---
+        // --- FONCTIONS GLOBALES ---
+        
+        // Ouvrir le modal Transaction
         window.oaTx = (type) => {
             document.getElementById('ov-tx').classList.add('on');
             document.getElementById('txtp').value = type;
             document.getElementById('txdt').valueAsDate = new Date();
-            upPlanOpts();
+            window.upSubOpts(); // Charger les sous-catégories
         };
 
+        // Ouvrir le modal Retrait
         window.oaRetrait = () => {
             document.getElementById('ov-retrait').classList.add('on');
             document.getElementById('re-date').valueAsDate = new Date();
         };
 
+        // Fermer les modals
+        window.cov = (id) => {
+            document.getElementById(id).classList.remove('on');
+        };
+
+        // Gérer les sous-catégories (Si vide -> Autres)
         window.upSubOpts = () => {
             const plan = document.getElementById('txpl').value;
             const sc = document.getElementById('txsc');
-            sc.innerHTML = '<option value="Autres">-- Autres --</option>';
             
             const cats = {
                 conso: ["Loyer", "Nourriture", "Transport", "Factures", "Santé"],
-                don: ["Famille", "Zakat", "Aumône", "Cadeaux"],
-                epargne: ["Fond d'urgence", "Projet Immobilier", "Mariage", "Voyage"],
-                invest: ["Bourse", "Crypto", "Business local"],
-                dette: ["Remboursement prêt", "Dette ami"]
+                don: ["Famille", "Zakat", "Aumône"],
+                epargne: ["Fond d'urgence", "Projet", "Voyage"],
+                invest: ["Bourse", "Business"],
+                dette: ["Remboursement prêt"]
             };
 
+            let options = '<option value="Autres">-- Autres --</option>';
             if(cats[plan]) {
-                cats[plan].forEach(c => {
-                    sc.innerHTML += `<option value="${c}">${c}</option>`;
-                });
+                cats[plan].forEach(c => options += `<option value="${c}">${c}</option>`);
+            }
+            sc.innerHTML = options;
+        };
+
+        // Sauvegarder dans Firebase
+        window.savTx = async () => {
+            const btn = document.getElementById('bstx');
+            btn.disabled = true;
+            btn.innerText = "Enregistrement...";
+
+            const data = {
+                type: document.getElementById('txtp').value,
+                desc: document.getElementById('txds').value || "Sans description",
+                montant: Number(document.getElementById('txam').value),
+                date: document.getElementById('txdt').value,
+                plan: document.getElementById('txpl').value,
+                sousCategorie: document.getElementById('txsc').value || "Autres",
+                userId: auth.currentUser ? auth.currentUser.uid : "anonyme",
+                createdAt: new Date()
+            };
+
+            try {
+                await addDoc(collection(db, "transactions"), data);
+                alert("Opération réussie !");
+                window.cov('ov-tx');
+            } catch (e) {
+                alert("Erreur : " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enregistrer";
             }
         };
 
-        // --- Rendu du Dashboard épuré ---
-        function renderHome() {
-            const container = document.getElementById('pg-db');
-            container.innerHTML = `
-                <div class="stit">Bienvenue sur votre gestionnaire</div>
-                <div class="home-grid">
-                    <div class="h-card bg" onclick="oaTx('revenu')">
-                        <span class="h-ico">💰</span>
-                        <div class="h-txt">Ajouter un revenu</div>
-                    </div>
-                    <div class="h-card br" onclick="oaTx('depense')">
-                        <span class="h-ico">💸</span>
-                        <div class="h-txt">Ajouter une dépense</div>
-                    </div>
-                    <div class="h-card bam" onclick="oaNouvDette()">
-                        <span class="h-ico">⚠️</span>
-                        <div class="h-txt">Contracter une dette</div>
-                    </div>
-                    <div class="h-card bb" onclick="oaRetrait()">
-                        <span class="h-ico">🏦</span>
-                        <div class="h-txt">Retrait épargne</div>
-                    </div>
-                </div>
-            `;
-        }
+        onAuthStateChanged(auth, user => {
+            if (!user) { console.log("Utilisateur non connecté"); }
+        });
     </script>
+
     <style>
         :root {
             --g:#16A34A; --r:#DC2626; --b:#2563EB; --am:#D97706; --w:#FFF;
-            --s0:#F9FAFB; --s2:#E5E7EB; --s8:#1F2937;
+            --s0:#F9FAFB; --s1:#F3F4F6; --s2:#E5E7EB; --s8:#1F2937;
             --shm:0 4px 16px rgba(0,0,0,.12); --r20:20px;
+            --font:'Plus Jakarta Sans', sans-serif;
         }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--s0); margin: 0; }
-        .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        body { font-family: var(--font); background: var(--s0); margin: 0; padding: 20px; color: var(--s8); }
+        
+        .header { margin-bottom: 30px; text-align: center; }
+        .header h1 { font-size: 24px; font-weight: 800; margin: 0; }
+        .header h1 span { color: var(--g); }
+
+        /* Grille Accueil - 4 Cases */
+        .home-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 15px; 
+            max-width: 600px; 
+            margin: 0 auto; 
+        }
         .h-card { 
-            padding: 30px 20px; border-radius: var(--r20); color: white; 
+            padding: 25px 15px; border-radius: var(--r20); color: white; 
             text-align: center; cursor: pointer; transition: 0.2s; box-shadow: var(--shm);
+            border: none;
         }
         .h-card:hover { transform: translateY(-3px); filter: brightness(1.1); }
-        .h-ico { font-size: 32px; display: block; margin-bottom: 10px; }
-        .h-txt { font-weight: 800; font-size: 15px; text-transform: uppercase; }
+        .h-ico { font-size: 30px; display: block; margin-bottom: 8px; }
+        .h-txt { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
         .bg { background: var(--g); } .br { background: var(--r); }
         .bam { background: var(--am); } .bb { background: var(--b); }
-        .stit { font-size: 24px; font-weight: 800; color: var(--s8); }
-        
-        /* Modal Styles */
-        .ov { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; }
+
+        /* Modals */
+        .ov { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center; backdrop-filter: blur(2px); }
         .ov.on { display:flex; }
-        .mo { background:white; padding:25px; border-radius:20px; width:90%; max-width:400px; }
-        .fl { margin-bottom:15px; }
-        .fl label { display:block; font-size:12px; font-weight:700; margin-bottom:5px; }
-        .fl input, .fl select { width:100%; padding:10px; border:1px solid var(--s2); border-radius:8px; }
+        .mo { background:white; padding:25px; border-radius:20px; width:90%; max-width:400px; box-shadow: var(--shm); }
+        .mo h3 { margin-top: 0; margin-bottom: 20px; font-weight: 800; }
+        
+        .fl { margin-bottom: 15px; }
+        .fl label { display:block; font-size:11px; font-weight:700; text-transform: uppercase; color: #666; margin-bottom: 5px; }
+        .fl input, .fl select { width:100%; padding:12px; border:1.5px solid var(--s2); border-radius:10px; box-sizing: border-box; font-size: 14px; }
+        .fl input:focus { border-color: var(--g); outline: none; }
+
         .btn-row { display:flex; gap:10px; margin-top:20px; }
-        .btn { flex:1; padding:12px; border:none; border-radius:8px; font-weight:700; cursor:pointer; }
+        .btn { flex:1; padding:13px; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size: 14px; transition: 0.2s; }
+        .btn-save { background: var(--g); color: white; }
+        .btn-cancel { background: var(--s1); color: var(--s8); }
     </style>
 </head>
-<body onload="renderHome()">
+<body>
 
-<div id="ap">
-    <div class="cnt">
-        <div class="pg on" id="pg-db"></div>
+    <div class="header">
+        <h1>Xiif <span>XamXam</span> Finances</h1>
+        <p style="font-size: 13px; color: #666;">Gestion simplifiée</p>
     </div>
-</div>
 
-<div class="ov" id="ov-tx">
-    <div class="mo">
-        <h3>Nouvelle opération</h3>
-        <div class="fl">
-            <label>Type</label>
-            <select id="txtp"><option value="revenu">Revenu</option><option value="depense">Dépense</option></select>
-        </div>
-        <div class="fl"><label>Description</label><input id="txds" placeholder="Ex: Salaire, Loyer..."></div>
-        <div class="fl"><label>Montant (FCFA)</label><input id="txam" type="number"></div>
-        <div class="fl">
-            <label>Plan</label>
-            <select id="txpl" onchange="upSubOpts()">
-                <option value="conso">Consommation</option>
-                <option value="don">Don</option>
-                <option value="epargne">Épargne</option>
-                <option value="invest">Investissement</option>
-            </select>
-        </div>
-        <div class="fl">
-            <label>Sous-catégorie</label>
-            <select id="txsc"><option value="Autres">-- Autres --</option></select>
-        </div>
-        <div class="btn-row">
-            <button class="btn" style="background:#EEE" onclick="document.getElementById('ov-tx').classList.remove('on')">Annuler</button>
-            <button class="btn bg" style="color:white">Enregistrer</button>
-        </div>
+    <div class="home-grid">
+        <button class="h-card bg" onclick="oaTx('revenu')">
+            <span class="h-ico">💰</span>
+            <div class="h-txt">Revenu</div>
+        </button>
+        <button class="h-card br" onclick="oaTx('depense')">
+            <span class="h-ico">💸</span>
+            <div class="h-txt">Dépense</div>
+        </button>
+        <button class="h-card bam" onclick="alert('Fonction dette à venir')">
+            <span class="h-ico">⚠️</span>
+            <div class="h-txt">Dette</div>
+        </button>
+        <button class="h-card bb" onclick="oaRetrait()">
+            <span class="h-ico">🏦</span>
+            <div class="h-txt">Retrait Épargne</div>
+        </button>
     </div>
-</div>
 
-<div class="ov" id="ov-retrait">
-    <div class="mo">
-        <h3>↩ Retrait Épargne</h3>
-        <div class="fl">
-            <label>Retirer de quelle caisse ?</label>
-            <select id="re-source">
-                <option value="urgence">Caisse d'Urgence</option>
-                <option value="immobilier">Caisse Immobilier</option>
-                <option value="autre">Autre épargne</option>
-            </select>
-        </div>
-        <div class="fl"><label>Montant à retirer</label><input id="re-mont" type="number"></div>
-        <div class="fl"><label>Destination (Où va l'argent ?)</label><input id="re-dest" placeholder="Ex: Réparation voiture"></div>
-        <div class="btn-row">
-            <button class="btn" style="background:#EEE" onclick="document.getElementById('ov-retrait').classList.remove('on')">Annuler</button>
-            <button class="btn bb" style="color:white">Confirmer le retrait</button>
+    <div class="ov" id="ov-tx">
+        <div class="mo">
+            <h3>Opération</h3>
+            <input type="hidden" id="txtp">
+            <div class="fl"><label>Description</label><input id="txds" placeholder="Ex: Salaire, Courses..."></div>
+            <div class="fl"><label>Montant (FCFA)</label><input id="txam" type="number" placeholder="0"></div>
+            <div class="fl"><label>Date</label><input id="txdt" type="date"></div>
+            <div class="fl">
+                <label>Plan concerné</label>
+                <select id="txpl" onchange="window.upSubOpts()">
+                    <option value="conso">🛒 Consommation</option>
+                    <option value="don">🤲 Don</option>
+                    <option value="epargne">💳 Épargne</option>
+                    <option value="invest">📈 Investissement</option>
+                    <option value="dette">⚠️ Dette</option>
+                </select>
+            </div>
+            <div class="fl">
+                <label>Sous-catégorie</label>
+                <select id="txsc">
+                    </select>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-cancel" onclick="cov('ov-tx')">Annuler</button>
+                <button class="btn btn-save" id="bstx" onclick="savTx()">Enregistrer</button>
+            </div>
         </div>
     </div>
-</div>
+
+    <div class="ov" id="ov-retrait">
+        <div class="mo">
+            <h3>↩ Retrait Épargne</h3>
+            <div class="fl">
+                <label>Depuis quelle caisse ?</label>
+                <select id="re-source">
+                    <option value="urgence">🚨 Fond d'urgence</option>
+                    <option value="projet">🏗️ Projet Immobilier</option>
+                    <option value="autre">📦 Autre</option>
+                </select>
+            </div>
+            <div class="fl"><label>Montant</label><input id="re-mont" type="number"></div>
+            <div class="fl"><label>Note / Destination</label><input id="re-note" placeholder="Pourquoi ce retrait ?"></div>
+            <div class="fl"><label>Date</label><input id="re-date" type="date"></div>
+            <div class="btn-row">
+                <button class="btn btn-cancel" onclick="cov('ov-retrait')">Annuler</button>
+                <button class="btn bb" style="color:white; flex:1;" onclick="alert('Retrait enregistré (simulé)')">Confirmer</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
