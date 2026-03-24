@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xiif XamXam Finances - V2</title>
+    <title>Xiif XamXam Finances V2</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
@@ -25,243 +24,246 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- ÉTAT GLOBAL ---
+        let currentTab = 'depense';
+
         // --- NAVIGATION ---
-        window.showPage = (id) => {
-            document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
-            document.getElementById('pg-' + id).classList.add('on');
-            document.querySelectorAll('.ntab').forEach(t => t.classList.remove('on'));
-            const activeTab = document.querySelector(`[onclick="showPage('${id}')"]`);
-            if(activeTab) activeTab.classList.add('on');
+        window.switchTab = (tab) => {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + tab).classList.add('active');
+            renderLists();
         };
 
-        // --- GESTION DES SOUS-CATÉGORIES ---
-        window.upSubOpts = () => {
-            const plan = document.getElementById('txpl').value;
-            const sc = document.getElementById('txsc');
-            const cats = {
-                conso: ["Nourriture", "Loyer", "Transport", "Santé", "Loisirs"],
-                don: ["Famille", "Zakat", "Aumône", "Cadeaux"],
-                epargne: ["Urgence", "Projet Immobilier", "Epargne Long Terme"],
-                invest: ["Bourse/Crypto", "Business local", "Formation"],
-                dette: ["Remboursement prêt", "Dette amicale"]
-            };
-            let html = '<option value="Autres">-- Autres --</option>';
-            if(cats[plan]) cats[plan].forEach(c => html += `<option value="${c}">${c}</option>`);
-            sc.innerHTML = html;
-        };
+        window.showOverlay = (id) => document.getElementById(id).classList.add('on');
+        window.hideOverlay = (id) => document.getElementById(id).classList.remove('on');
 
-        // --- ACTIONS ---
-        window.oaTx = (type) => {
-            document.getElementById('ov-tx').classList.add('on');
-            document.getElementById('txtp').value = type;
-            document.getElementById('txdt').valueAsDate = new Date();
-            window.upSubOpts();
-        };
+        // --- LOGIQUE DASHBOARD & LISTES ---
+        let allTransactions = [];
 
-        window.savTx = async () => {
-            const btn = document.getElementById('bstx');
-            const data = {
-                type: document.getElementById('txtp').value,
-                desc: document.getElementById('txds').value || "Sans titre",
-                montant: Number(document.getElementById('txam').value),
-                date: document.getElementById('txdt').value,
-                plan: document.getElementById('txpl').value,
-                sousCategorie: document.getElementById('txsc').value || "Autres",
-                createdAt: new Date()
-            };
-            if(!data.montant) return alert("Montant obligatoire !");
-            btn.disabled = true;
-            try {
-                await addDoc(collection(db, "transactions"), data);
-                document.getElementById('ov-tx').classList.remove('on');
-                document.getElementById('txds').value = ""; document.getElementById('txam').value = "";
-            } catch (e) { alert("Erreur d'enregistrement"); }
-            btn.disabled = false;
-        };
+        function updateDashboard() {
+            const today = new Date().toISOString().split('T')[0];
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
 
-        // --- EXPORT EXCEL ---
-        window.exportExcel = async () => {
-            const q = query(collection(db, "transactions"), orderBy("date", "desc"));
-            const querySnapshot = await getDocs(q);
-            const data = [];
-            
-            querySnapshot.forEach((doc) => {
-                const t = doc.data();
-                data.push({
-                    "Date": t.date,
-                    "Type": t.type,
-                    "Description": t.desc,
-                    "Montant (FCFA)": t.montant,
-                    "Plan": t.plan,
-                    "Sous-Catégorie": t.sousCategorie
-                });
+            let solde = 0, revDay = 0, depDay = 0, revMonth = 0, depMonth = 0;
+
+            allTransactions.forEach(t => {
+                const tDate = new Date(t.date);
+                const isToday = t.date === today;
+                const isThisMonth = tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+
+                if (t.type === 'revenu') {
+                    solde += t.montant;
+                    if (isToday) revDay += t.montant;
+                    if (isThisMonth) revMonth += t.montant;
+                } else {
+                    solde -= t.montant;
+                    if (isToday) depDay += t.montant;
+                    if (isThisMonth) depMonth += t.montant;
+                }
             });
 
-            const worksheet = XLSX.utils.json_to_sheet(data);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Finances");
-            XLSX.writeFile(workbook, `Xiif_Finances_${new Date().toISOString().slice(0,10)}.xlsx`);
-        };
-
-        // --- CHARGEMENT DES DONNÉES ---
-        function loadData() {
-            const q = query(collection(db, "transactions"), orderBy("date", "desc"));
-            onSnapshot(q, (snapshot) => {
-                let txHtml = "";
-                let totals = { conso:0, don:0, epargne:0, invest:0, dette:0 };
-
-                snapshot.forEach((doc) => {
-                    const t = doc.data();
-                    const isRev = t.type === 'revenu';
-                    txHtml += `
-                        <div class="tx-item" style="border-left:5px solid ${isRev?'var(--g)':'var(--r)'}">
-                            <div><strong>${t.desc}</strong><br><small>${t.date} | ${t.sousCategorie}</small></div>
-                            <div style="color:${isRev?'var(--g)':'var(--r)'}; font-weight:800">
-                                ${isRev?'+':'-'} ${t.montant.toLocaleString()} F
-                            </div>
-                        </div>`;
-                    if(!isRev && totals[t.plan] !== undefined) totals[t.plan] += t.montant;
-                });
-
-                document.getElementById('txlist').innerHTML = txHtml || "Aucune transaction.";
-                document.getElementById('plan-stats').innerHTML = `
-                    <div class="stat-card">🛒 Consommation: <b>${totals.conso.toLocaleString()} F</b></div>
-                    <div class="stat-card">🤲 Don: <b>${totals.don.toLocaleString()} F</b></div>
-                    <div class="stat-card">💳 Épargne: <b>${totals.epargne.toLocaleString()} F</b></div>
-                    <div class="stat-card">📈 Invest: <b>${totals.invest.toLocaleString()} F</b></div>
-                `;
-            });
+            document.getElementById('db-solde').textContent = solde.toLocaleString() + " F";
+            document.getElementById('db-rev-day').textContent = "+" + revDay.toLocaleString();
+            document.getElementById('db-dep-day').textContent = "-" + depDay.toLocaleString();
+            document.getElementById('db-rev-month').textContent = revMonth.toLocaleString() + " F";
+            document.getElementById('db-solde-month').textContent = (revMonth - depMonth).toLocaleString() + " F";
         }
 
+        function renderLists() {
+            const list = document.getElementById('tx-list');
+            const filtered = allTransactions.filter(t => t.type === currentTab);
+            
+            list.innerHTML = filtered.map(t => `
+                <div class="tx-card">
+                    <div class="tx-info">
+                        <span class="tx-title">${t.desc}</span>
+                        <span class="tx-sub">${t.date} • ${t.sousCategorie}</span>
+                    </div>
+                    <div class="tx-amt ${t.type}">${t.type==='revenu'?'+':'-'} ${t.montant.toLocaleString()}</div>
+                </div>
+            `).join('') || `<p style="text-align:center;color:#999;padding:20px;">Aucune donnée en ${currentTab}</p>`;
+        }
+
+        // --- AJOUT SÉCURISÉ ---
+        window.saveTx = async () => {
+            const btn = document.getElementById('btn-save');
+            const desc = document.getElementById('in-desc').value;
+            const montant = Number(document.getElementById('in-amt').value);
+            const date = document.getElementById('in-date').value;
+            const plan = document.getElementById('in-plan').value;
+
+            if(!montant || !desc) return alert("Champs vides !");
+
+            // Anti-doublon : désactiver le bouton
+            btn.disabled = true;
+            btn.innerHTML = "Enregistrement...";
+
+            try {
+                await addDoc(collection(db, "transactions"), {
+                    type: currentTab,
+                    desc, montant, date, plan,
+                    sousCategorie: "Autres",
+                    createdAt: serverTimestamp()
+                });
+                
+                hideOverlay('ov-add');
+                showToast("Élément ajouté avec succès !");
+                // Reset form
+                document.getElementById('in-desc').value = "";
+                document.getElementById('in-amt').value = "";
+            } catch (e) {
+                alert("Erreur");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "Confirmer l'ajout";
+            }
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('on');
+            setTimeout(() => t.classList.remove('on'), 3000);
+        }
+
+        // --- SYNC FIREBASE ---
         onAuthStateChanged(auth, user => {
             if (user) {
-                document.getElementById('ap').style.display = 'flex';
-                document.getElementById('ld').style.display = 'none';
-                loadData();
+                document.getElementById('app').style.display = 'block';
+                const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+                onSnapshot(q, (snap) => {
+                    allTransactions = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    updateDashboard();
+                    renderLists();
+                });
             }
         });
     </script>
 
     <style>
-        :root {
-            --g:#16A34A; --r:#DC2626; --b:#2563EB; --am:#D97706; --w:#FFF;
-            --s0:#F9FAFB; --s2:#E5E7EB; --s5:#6B7280; --s8:#1F2937;
-            --shm:0 4px 16px rgba(0,0,0,.12); --r20:20px;
-        }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--s0); margin: 0; }
-        .tnav { background: var(--w); border-bottom: 1px solid var(--s2); display: flex; align-items: center; padding: 0 15px; height: 60px; position: sticky; top:0; z-index:100; }
-        .ttabs { display: flex; gap: 5px; overflow-x: auto; flex: 1; margin-left: 10px; }
-        .ntab { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--s5); cursor: pointer; border-radius: 8px; white-space: nowrap; }
-        .ntab.on { color: var(--g); background: #f0fdf4; }
-        .cnt { padding: 20px; max-width: 600px; margin: 0 auto; }
-        .pg { display: none; } .pg.on { display: block; }
-
-        .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .h-card { padding: 30px 10px; border-radius: var(--r20); color: white; text-align: center; cursor: pointer; border: none; box-shadow: var(--shm); font-weight:800; }
-        .bg { background: var(--g); } .br { background: var(--r); } .bam { background: var(--am); } .bb { background: var(--b); }
+        :root { --g: #16A34A; --r: #DC2626; --s8: #1F2937; --s2: #E5E7EB; --font: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: var(--font); background: #F9FAFB; margin: 0; color: var(--s8); padding-bottom: 100px; }
         
-        .tx-item { background: white; padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--s2); }
-        .stat-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--g); box-shadow: var(--shm); }
+        /* Dashboard Styles */
+        .header { background: white; padding: 25px 20px; border-bottom: 1px solid var(--s2); }
+        .solde-label { font-size: 13px; font-weight: 600; color: #666; text-transform: uppercase; }
+        .solde-val { font-size: 32px; font-weight: 800; margin: 5px 0 20px; color: #000; }
+        
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .dash-card { background: #F3F4F6; padding: 15px; border-radius: 16px; }
+        .dash-card.green { background: #F0FDF4; color: var(--g); }
+        .dash-card.red { background: #FEF2F2; color: var(--r); }
+        .dash-num { font-weight: 800; font-size: 18px; display: block; }
+        .dash-sub { font-size: 11px; font-weight: 600; text-transform: uppercase; opacity: 0.8; }
 
-        .ov { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500; align-items:center; justify-content:center; backdrop-filter: blur(3px); }
+        /* Navigation Tabs */
+        .tabs { display: flex; background: white; padding: 10px 20px; sticky top:0; gap: 10px; border-bottom: 1px solid var(--s2); }
+        .tab-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; background: transparent; color: #999; transition: 0.3s; }
+        .tab-btn.active { background: #F3F4F6; color: var(--s8); }
+
+        /* List Styles */
+        .list-container { padding: 20px; }
+        .tx-card { background: white; padding: 16px; border-radius: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .tx-title { font-weight: 700; display: block; font-size: 15px; }
+        .tx-sub { font-size: 12px; color: #999; }
+        .tx-amt { font-weight: 800; font-size: 16px; }
+        .tx-amt.revenu { color: var(--g); }
+        .tx-amt.depense { color: var(--r); }
+
+        /* Floating Button */
+        .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; background: var(--s8); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); cursor: pointer; }
+
+        /* Overlays */
+        .ov { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-end; backdrop-filter: blur(4px); }
         .ov.on { display:flex; }
-        .mo { background:white; padding:25px; border-radius:24px; width:90%; max-width:400px; }
-        .fl { margin-bottom: 12px; }
-        .fl label { display:block; font-size:11px; font-weight:700; text-transform: uppercase; color: var(--s5); margin-bottom: 4px; }
-        .fl input, .fl select { width:100%; padding:10px; border:1.5px solid var(--s2); border-radius:10px; font-size: 14px; box-sizing: border-box; }
-        .btn-row { display:flex; gap:10px; margin-top:15px; }
-        .btn { flex:1; padding:12px; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
+        .mo { background:white; width:100%; border-radius: 24px 24px 0 0; padding: 30px 20px; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .field { margin-bottom: 15px; }
+        .field label { display: block; font-size: 12px; font-weight: 700; color: #666; margin-bottom: 6px; }
+        .field input, .field select { width: 100%; padding: 14px; border: 1.5px solid var(--s2); border-radius: 12px; box-sizing: border-box; font-size: 16px; }
+
+        /* Toast */
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--s8); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 600; transition: 0.5s; z-index: 2000; }
+        .toast.on { transform: translateX(-50%) translateY(0); }
     </style>
 </head>
 <body>
 
-<div id="ld" style="text-align:center; padding-top:100px;">Initialisation...</div>
-
-<div id="ap" style="display:none; flex-direction:column;">
-    <nav class="tnav">
-        <div style="font-weight:900; font-size:18px;">Xiif</div>
-        <div class="ttabs">
-            <div class="ntab on" onclick="showPage('db')">🏠 Accueil</div>
-            <div class="ntab" onclick="showPage('tx')">💳 Historique</div>
-            <div class="ntab" onclick="showPage('plans')">📊 Plans</div>
-            <div class="ntab" onclick="showPage('param')">⚙️ Paramètres</div>
-        </div>
-    </nav>
-
-    <div class="cnt">
-        <div class="pg on" id="pg-db">
-            <h2 style="margin-bottom:20px;">Bonjour 👋</h2>
-            <div class="home-grid">
-                <button class="h-card bg" onclick="oaTx('revenu')">💰 Revenu</button>
-                <button class="h-card br" onclick="oaTx('depense')">💸 Dépense</button>
-                <button class="h-card bam" onclick="oaTx('depense'); document.getElementById('txpl').value='dette'; window.upSubOpts();">⚠️ Dette</button>
-                <button class="h-card bb" onclick="document.getElementById('ov-retrait').classList.add('on');">🏦 Retrait Ep.</button>
+<div id="app" style="display:none">
+    <div class="header">
+        <span class="solde-label">Solde Actuel</span>
+        <div class="solde-val" id="db-solde">0 F</div>
+        
+        <div class="dash-grid">
+            <div class="dash-card green">
+                <span class="dash-sub">Revenu Jour</span>
+                <span class="dash-num" id="db-rev-day">+0</span>
             </div>
-        </div>
-
-        <div class="pg" id="pg-tx">
-            <h3>Dernières opérations</h3>
-            <div id="txlist">Chargement...</div>
-        </div>
-
-        <div class="pg" id="pg-plans">
-            <h3>Dépenses cumulées</h3>
-            <div id="plan-stats"></div>
-        </div>
-
-        <div class="pg" id="pg-param">
-            <h3>Paramètres & Données</h3>
-            <div class="stat-card" style="border-left-color: var(--b); cursor: pointer;" onclick="exportExcel()">
-                <strong>📥 Exporter mes données (.xlsx)</strong>
-                <p style="margin:5px 0 0; font-size:12px; color:var(--s5)">Télécharge toutes tes transactions dans un fichier Excel.</p>
+            <div class="dash-card red">
+                <span class="dash-sub">Dépense Jour</span>
+                <span class="dash-num" id="db-dep-day">-0</span>
             </div>
-            <button class="btn" style="background:var(--r); color:white; width:100%; margin-top:20px;" onclick="auth.signOut()">Se déconnecter</button>
+            <div class="dash-card">
+                <span class="dash-sub">Total Mois</span>
+                <span class="dash-num" id="db-rev-month">0 F</span>
+            </div>
+            <div class="dash-card">
+                <span class="dash-sub">Solde Mois</span>
+                <span class="dash-num" id="db-solde-month">0 F</span>
+            </div>
         </div>
     </div>
+
+    <div class="tabs">
+        <button class="tab-btn" id="btn-revenu" onclick="switchTab('revenu')">REVENUS</button>
+        <button class="tab-btn active" id="btn-depense" onclick="switchTab('depense')">DÉPENSES</button>
+    </div>
+
+    <div class="list-container" id="tx-list">
+        </div>
+
+    <button class="fab" onclick="showOverlay('ov-add')">+</button>
 </div>
 
-<div class="ov" id="ov-tx">
+<div class="ov" id="ov-add">
     <div class="mo">
-        <h3>Nouvelle Opération</h3>
-        <input type="hidden" id="txtp">
-        <div class="fl"><label>Description</label><input id="txds" placeholder="Ex: Salaire, Loyer..."></div>
-        <div class="fl"><label>Montant (FCFA)</label><input id="txam" type="number"></div>
-        <div class="fl"><label>Date</label><input id="txdt" type="date"></div>
-        <div class="fl">
-            <label>Plan</label>
-            <select id="txpl" onchange="upSubOpts()">
+        <h3 style="margin:0 0 20px">Ajouter une opération</h3>
+        <div class="field">
+            <label>Libellé / Description</label>
+            <input id="in-desc" placeholder="Ex: Salaire, Loyer...">
+        </div>
+        <div class="field">
+            <label>Montant (FCFA)</label>
+            <input id="in-amt" type="number" placeholder="0">
+        </div>
+        <div class="field">
+            <label>Date</label>
+            <input id="in-date" type="date">
+        </div>
+        <div class="field">
+            <label>Plan / Catégorie</label>
+            <select id="in-plan">
                 <option value="conso">🛒 Consommation</option>
                 <option value="don">🤲 Don</option>
                 <option value="epargne">💳 Épargne</option>
                 <option value="invest">📈 Investissement</option>
-                <option value="dette">⚠️ Dette</option>
             </select>
         </div>
-        <div class="fl"><label>Sous-catégorie</label><select id="txsc"></select></div>
-        <div class="btn-row">
-            <button class="btn" style="background:#eee" onclick="document.getElementById('ov-tx').classList.remove('on')">Annuler</button>
-            <button class="btn bg" id="bstx" onclick="savTx()" style="color:white">Enregistrer</button>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="tab-btn" style="background:#eee" onclick="hideOverlay('ov-add')">Annuler</button>
+            <button class="tab-btn active" id="btn-save" onclick="saveTx()" style="background:var(--s8); color:white">Confirmer l'ajout</button>
         </div>
     </div>
 </div>
 
-<div class="ov" id="ov-retrait">
-    <div class="mo">
-        <h3>↩ Retrait Épargne</h3>
-        <div class="fl">
-            <label>Caisse source</label>
-            <select id="re-src">
-                <option value="urgence">🚨 Fond d'urgence</option>
-                <option value="projet">🏗️ Projet</option>
-            </select>
-        </div>
-        <div class="fl"><label>Montant</label><input type="number" id="re-amt"></div>
-        <div class="btn-row">
-            <button class="btn" style="background:#eee" onclick="document.getElementById('ov-retrait').classList.remove('on')">Annuler</button>
-            <button class="btn bb" style="color:white" onclick="alert('Retrait simulé !'); document.getElementById('ov-retrait').classList.remove('on')">Valider</button>
-        </div>
-    </div>
-</div>
+<div id="toast" class="toast">Élément ajouté !</div>
+
+<script>
+    document.getElementById('in-date').valueAsDate = new Date();
+</script>
 
 </body>
 </html>
