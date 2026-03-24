@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xiif XamXam Finances - V2</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
@@ -33,27 +32,28 @@
             if(activeTab) activeTab.classList.add('on');
         };
 
-        // --- LOGIQUE TRANSACTION ---
+        // --- GESTION DES SOUS-CATÉGORIES ---
+        window.upSubOpts = () => {
+            const plan = document.getElementById('txpl').value;
+            const sc = document.getElementById('txsc');
+            const cats = {
+                conso: ["Nourriture", "Loyer", "Transport", "Santé"],
+                don: ["Famille", "Zakat", "Cadeaux"],
+                epargne: ["Urgence", "Projet"],
+                invest: ["Bourse", "Business"],
+                dette: ["Remboursement"]
+            };
+            let html = '<option value="Autres">-- Autres --</option>';
+            if(cats[plan]) cats[plan].forEach(c => html += `<option value="${c}">${c}</option>`);
+            sc.innerHTML = html;
+        };
+
+        // --- ACTIONS ---
         window.oaTx = (type) => {
             document.getElementById('ov-tx').classList.add('on');
             document.getElementById('txtp').value = type;
             document.getElementById('txdt').valueAsDate = new Date();
             window.upSubOpts();
-        };
-
-        window.upSubOpts = () => {
-            const plan = document.getElementById('txpl').value;
-            const sc = document.getElementById('txsc');
-            const cats = {
-                conso: ["Loyer", "Nourriture", "Transport", "Factures", "Santé", "Loisirs"],
-                don: ["Famille", "Zakat", "Aumône", "Cadeaux"],
-                epargne: ["Fond d'urgence", "Projet Immo", "Épargne Long Terme"],
-                invest: ["Bourse/Crypto", "Business local", "Formation"],
-                dette: ["Remboursement prêt", "Dette amicale"]
-            };
-            let html = '<option value="Autres">-- Autres (Par défaut) --</option>';
-            if(cats[plan]) cats[plan].forEach(c => html += `<option value="${c}">${c}</option>`);
-            sc.innerHTML = html;
         };
 
         window.savTx = async () => {
@@ -64,26 +64,59 @@
                 montant: Number(document.getElementById('txam').value),
                 date: document.getElementById('txdt').value,
                 plan: document.getElementById('txpl').value,
-                sousCategorie: document.getElementById('txsc').value,
+                sousCategorie: document.getElementById('txsc').value || "Autres",
                 createdAt: new Date()
             };
-            if(!data.montant) return alert("Indique le montant !");
+            if(!data.montant) return alert("Montant obligatoire !");
             btn.disabled = true;
             try {
                 await addDoc(collection(db, "transactions"), data);
                 document.getElementById('ov-tx').classList.remove('on');
-                alert("Enregistré !");
-            } catch (e) { alert("Erreur Firebase"); }
+                document.getElementById('txds').value = ""; document.getElementById('txam').value = "";
+            } catch (e) { alert("Erreur d'enregistrement"); }
             btn.disabled = false;
         };
 
-        // --- AUTH & INITIALISATION ---
+        // --- CHARGEMENT DES DONNÉES (TEMPS RÉEL) ---
+        function loadData() {
+            const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+            onSnapshot(q, (snapshot) => {
+                let txHtml = "";
+                let totals = { conso:0, don:0, epargne:0, invest:0, dette:0 };
+
+                snapshot.forEach((doc) => {
+                    const t = doc.data();
+                    const isRev = t.type === 'revenu';
+                    // Mise à jour de l'historique
+                    txHtml += `
+                        <div class="tx-item">
+                            <div><strong>${t.desc}</strong><br><small>${t.date} | ${t.sousCategorie}</small></div>
+                            <div style="color:${isRev?'var(--g)':'var(--r)'}; font-weight:800">
+                                ${isRev?'+':'-'} ${t.montant.toLocaleString()} F
+                            </div>
+                        </div>`;
+                    
+                    // Calcul pour les plans (on ne compte que les dépenses)
+                    if(!isRev && totals[t.plan] !== undefined) totals[t.plan] += t.montant;
+                });
+
+                document.getElementById('txlist').innerHTML = txHtml || "Aucune transaction.";
+                
+                // Mise à jour de la page Plans
+                document.getElementById('plan-stats').innerHTML = `
+                    <div class="stat-card">🛒 Consommation: <b>${totals.conso.toLocaleString()} F</b></div>
+                    <div class="stat-card">🤲 Don: <b>${totals.don.toLocaleString()} F</b></div>
+                    <div class="stat-card">💳 Épargne: <b>${totals.epargne.toLocaleString()} F</b></div>
+                    <div class="stat-card">📈 Invest: <b>${totals.invest.toLocaleString()} F</b></div>
+                `;
+            });
+        }
+
         onAuthStateChanged(auth, user => {
             if (user) {
                 document.getElementById('ap').style.display = 'flex';
                 document.getElementById('ld').style.display = 'none';
-            } else {
-                // Logique de redirection login si besoin
+                loadData();
             }
         });
     </script>
@@ -94,91 +127,76 @@
             --s0:#F9FAFB; --s2:#E5E7EB; --s5:#6B7280; --s8:#1F2937;
             --shm:0 4px 16px rgba(0,0,0,.12); --r20:20px;
         }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--s0); margin: 0; color: var(--s8); }
-        
-        /* NAVIGATION */
-        .tnav { background: var(--w); border-bottom: 1px solid var(--s2); display: flex; align-items: center; padding: 0 15px; position: sticky; top: 0; z-index: 100; height: 60px; }
-        .tbrand { font-weight: 800; font-size: 16px; margin-right: 20px; }
-        .ttabs { display: flex; gap: 5px; overflow-x: auto; flex: 1; }
-        .ntab { padding: 10px 15px; font-size: 13px; font-weight: 600; color: var(--s5); cursor: pointer; border-radius: 8px; white-space: nowrap; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--s0); margin: 0; }
+        .tnav { background: var(--w); border-bottom: 1px solid var(--s2); display: flex; align-items: center; padding: 0 15px; height: 60px; position: sticky; top:0; z-index:100; }
+        .ttabs { display: flex; gap: 5px; overflow-x: auto; flex: 1; margin-left: 10px; }
+        .ntab { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--s5); cursor: pointer; border-radius: 8px; white-space: nowrap; }
         .ntab.on { color: var(--g); background: #f0fdf4; }
+        
+        .cnt { padding: 20px; max-width: 600px; margin: 0 auto; }
+        .pg { display: none; } .pg.on { display: block; }
 
-        /* CONTENU */
-        .cnt { padding: 20px; max-width: 800px; margin: 0 auto; }
-        .pg { display: none; animation: fadeIn 0.3s; }
-        .pg.on { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* ACCUEIL : 4 CASES */
-        .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-        .h-card { padding: 35px 20px; border-radius: var(--r20); color: white; text-align: center; cursor: pointer; transition: 0.2s; box-shadow: var(--shm); border: none; }
-        .h-card:hover { transform: scale(1.02); filter: brightness(1.1); }
-        .h-ico { font-size: 35px; display: block; margin-bottom: 10px; }
-        .h-txt { font-weight: 800; font-size: 14px; text-transform: uppercase; }
-
-        .bg { background: var(--g); } .br { background: var(--r); }
-        .bam { background: var(--am); } .bb { background: var(--b); }
+        /* ACCUEIL 4 BOUTONS */
+        .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .h-card { padding: 30px 10px; border-radius: var(--r20); color: white; text-align: center; cursor: pointer; border: none; box-shadow: var(--shm); }
+        .h-card:hover { transform: scale(1.02); }
+        .bg { background: var(--g); } .br { background: var(--r); } .bam { background: var(--am); } .bb { background: var(--b); }
+        
+        /* LISTES & CARDS */
+        .tx-item { background: white; padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--s2); }
+        .stat-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--g); box-shadow: var(--shm); }
 
         /* MODALS */
         .ov { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500; align-items:center; justify-content:center; backdrop-filter: blur(3px); }
         .ov.on { display:flex; }
-        .mo { background:white; padding:25px; border-radius:24px; width:90%; max-width:420px; }
-        .fl { margin-bottom: 15px; }
-        .fl label { display:block; font-size:11px; font-weight:700; text-transform: uppercase; color: var(--s5); margin-bottom: 6px; }
-        .fl input, .fl select { width:100%; padding:12px; border:1.5px solid var(--s2); border-radius:12px; font-size: 15px; box-sizing: border-box; }
-        .btn-row { display:flex; gap:10px; margin-top:20px; }
-        .btn { flex:1; padding:14px; border:none; border-radius:12px; font-weight:700; cursor:pointer; }
+        .mo { background:white; padding:25px; border-radius:24px; width:90%; max-width:400px; }
+        .fl { margin-bottom: 12px; }
+        .fl label { display:block; font-size:11px; font-weight:700; text-transform: uppercase; color: var(--s5); margin-bottom: 4px; }
+        .fl input, .fl select { width:100%; padding:10px; border:1.5px solid var(--s2); border-radius:10px; font-size: 14px; box-sizing: border-box; }
+        .btn-row { display:flex; gap:10px; margin-top:15px; }
+        .btn { flex:1; padding:12px; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
     </style>
 </head>
 <body>
 
-<div id="ld" style="text-align:center; padding:100px;">Chargement...</div>
+<div id="ld" style="text-align:center; padding-top:100px;">Chargement de vos finances...</div>
 
 <div id="ap" style="display:none; flex-direction:column;">
     <nav class="tnav">
-        <div class="tbrand">Xiif XamXam</div>
+        <div style="font-weight:900; font-size:18px;">Xiif</div>
         <div class="ttabs">
             <div class="ntab on" onclick="showPage('db')">🏠 Accueil</div>
             <div class="ntab" onclick="showPage('tx')">💳 Historique</div>
             <div class="ntab" onclick="showPage('plans')">📊 Plans</div>
-            <div class="ntab" onclick="showPage('param')">⚙️ Paramètres</div>
         </div>
     </nav>
 
     <div class="cnt">
         <div class="pg on" id="pg-db">
-            <h2 style="margin-bottom: 20px; font-weight: 800;">Que voulez-vous faire ?</h2>
+            <h2 style="margin-bottom:20px;">Tableau de bord</h2>
             <div class="home-grid">
-                <button class="h-card bg" onclick="oaTx('revenu')">
-                    <span class="h-ico">💰</span><div class="h-txt">Ajouter un Revenu</div>
-                </button>
-                <button class="h-card br" onclick="oaTx('depense')">
-                    <span class="h-ico">💸</span><div class="h-txt">Ajouter une Dépense</div>
-                </button>
-                <button class="h-card bam" onclick="oaTx('depense'); document.getElementById('txpl').value='dette';">
-                    <span class="h-ico">⚠️</span><div class="h-txt">Contracter une Dette</div>
-                </button>
-                <button class="h-card bb" onclick="document.getElementById('ov-retrait').classList.add('on');">
-                    <span class="h-ico">🏦</span><div class="h-txt">Retrait Épargne</div>
-                </button>
+                <button class="h-card bg" onclick="oaTx('revenu')">💰 Revenu</button>
+                <button class="h-card br" onclick="oaTx('depense')">💸 Dépense</button>
+                <button class="h-card bam" onclick="oaTx('depense'); document.getElementById('txpl').value='dette'; window.upSubOpts();">⚠️ Dette</button>
+                <button class="h-card bb" onclick="document.getElementById('ov-retrait').classList.add('on');">🏦 Retrait Ep.</button>
             </div>
         </div>
 
         <div class="pg" id="pg-tx">
-            <h3>Historique des transactions</h3>
-            <p style="color:var(--s5)">Les transactions s'afficheront ici...</p>
+            <h3>Dernières opérations</h3>
+            <div id="txlist">Chargement...</div>
         </div>
 
         <div class="pg" id="pg-plans">
-            <h3>Répartition par Plan</h3>
-            <p>Ici tes statistiques de dépenses par catégorie.</p>
+            <h3>Dépenses par Plan</h3>
+            <div id="plan-stats"></div>
         </div>
     </div>
 </div>
 
 <div class="ov" id="ov-tx">
     <div class="mo">
-        <h3 id="m-tit">Nouvelle Opération</h3>
+        <h3>Nouvelle Opération</h3>
         <input type="hidden" id="txtp">
         <div class="fl"><label>Description</label><input id="txds" placeholder="Ex: Salaire, Loyer..."></div>
         <div class="fl"><label>Montant (FCFA)</label><input id="txam" type="number"></div>
@@ -205,18 +223,16 @@
     <div class="mo">
         <h3>↩ Retrait Épargne</h3>
         <div class="fl">
-            <label>Retirer de quelle caisse ?</label>
+            <label>Caisse source</label>
             <select id="re-src">
                 <option value="urgence">🚨 Fond d'urgence</option>
-                <option value="projet">🏗️ Projet Immobilier</option>
-                <option value="autre">📦 Autre</option>
+                <option value="projet">🏗️ Projet</option>
             </select>
         </div>
-        <div class="fl"><label>Montant</label><input id="re-amt" type="number"></div>
-        <div class="fl"><label>Note</label><input id="re-note" placeholder="Pourquoi ?"></div>
+        <div class="fl"><label>Montant</label><input type="number" id="re-amt"></div>
         <div class="btn-row">
             <button class="btn" style="background:#eee" onclick="document.getElementById('ov-retrait').classList.remove('on')">Annuler</button>
-            <button class="btn bb" style="color:white" onclick="alert('Retrait enregistré !'); document.getElementById('ov-retrait').classList.remove('on')">Confirmer</button>
+            <button class="btn bb" style="color:white" onclick="alert('Retrait simulé !'); document.getElementById('ov-retrait').classList.remove('on')">Valider</button>
         </div>
     </div>
 </div>
