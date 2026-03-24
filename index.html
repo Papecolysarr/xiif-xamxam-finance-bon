@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xiif XamXam Finances - V2</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
@@ -37,11 +39,11 @@
             const plan = document.getElementById('txpl').value;
             const sc = document.getElementById('txsc');
             const cats = {
-                conso: ["Nourriture", "Loyer", "Transport", "Santé"],
-                don: ["Famille", "Zakat", "Cadeaux"],
-                epargne: ["Urgence", "Projet"],
-                invest: ["Bourse", "Business"],
-                dette: ["Remboursement"]
+                conso: ["Nourriture", "Loyer", "Transport", "Santé", "Loisirs"],
+                don: ["Famille", "Zakat", "Aumône", "Cadeaux"],
+                epargne: ["Urgence", "Projet Immobilier", "Epargne Long Terme"],
+                invest: ["Bourse/Crypto", "Business local", "Formation"],
+                dette: ["Remboursement prêt", "Dette amicale"]
             };
             let html = '<option value="Autres">-- Autres --</option>';
             if(cats[plan]) cats[plan].forEach(c => html += `<option value="${c}">${c}</option>`);
@@ -77,7 +79,31 @@
             btn.disabled = false;
         };
 
-        // --- CHARGEMENT DES DONNÉES (TEMPS RÉEL) ---
+        // --- EXPORT EXCEL ---
+        window.exportExcel = async () => {
+            const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+            const querySnapshot = await getDocs(q);
+            const data = [];
+            
+            querySnapshot.forEach((doc) => {
+                const t = doc.data();
+                data.push({
+                    "Date": t.date,
+                    "Type": t.type,
+                    "Description": t.desc,
+                    "Montant (FCFA)": t.montant,
+                    "Plan": t.plan,
+                    "Sous-Catégorie": t.sousCategorie
+                });
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Finances");
+            XLSX.writeFile(workbook, `Xiif_Finances_${new Date().toISOString().slice(0,10)}.xlsx`);
+        };
+
+        // --- CHARGEMENT DES DONNÉES ---
         function loadData() {
             const q = query(collection(db, "transactions"), orderBy("date", "desc"));
             onSnapshot(q, (snapshot) => {
@@ -87,22 +113,17 @@
                 snapshot.forEach((doc) => {
                     const t = doc.data();
                     const isRev = t.type === 'revenu';
-                    // Mise à jour de l'historique
                     txHtml += `
-                        <div class="tx-item">
+                        <div class="tx-item" style="border-left:5px solid ${isRev?'var(--g)':'var(--r)'}">
                             <div><strong>${t.desc}</strong><br><small>${t.date} | ${t.sousCategorie}</small></div>
                             <div style="color:${isRev?'var(--g)':'var(--r)'}; font-weight:800">
                                 ${isRev?'+':'-'} ${t.montant.toLocaleString()} F
                             </div>
                         </div>`;
-                    
-                    // Calcul pour les plans (on ne compte que les dépenses)
                     if(!isRev && totals[t.plan] !== undefined) totals[t.plan] += t.montant;
                 });
 
                 document.getElementById('txlist').innerHTML = txHtml || "Aucune transaction.";
-                
-                // Mise à jour de la page Plans
                 document.getElementById('plan-stats').innerHTML = `
                     <div class="stat-card">🛒 Consommation: <b>${totals.conso.toLocaleString()} F</b></div>
                     <div class="stat-card">🤲 Don: <b>${totals.don.toLocaleString()} F</b></div>
@@ -132,21 +153,16 @@
         .ttabs { display: flex; gap: 5px; overflow-x: auto; flex: 1; margin-left: 10px; }
         .ntab { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--s5); cursor: pointer; border-radius: 8px; white-space: nowrap; }
         .ntab.on { color: var(--g); background: #f0fdf4; }
-        
         .cnt { padding: 20px; max-width: 600px; margin: 0 auto; }
         .pg { display: none; } .pg.on { display: block; }
 
-        /* ACCUEIL 4 BOUTONS */
         .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .h-card { padding: 30px 10px; border-radius: var(--r20); color: white; text-align: center; cursor: pointer; border: none; box-shadow: var(--shm); }
-        .h-card:hover { transform: scale(1.02); }
+        .h-card { padding: 30px 10px; border-radius: var(--r20); color: white; text-align: center; cursor: pointer; border: none; box-shadow: var(--shm); font-weight:800; }
         .bg { background: var(--g); } .br { background: var(--r); } .bam { background: var(--am); } .bb { background: var(--b); }
         
-        /* LISTES & CARDS */
         .tx-item { background: white; padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--s2); }
         .stat-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--g); box-shadow: var(--shm); }
 
-        /* MODALS */
         .ov { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500; align-items:center; justify-content:center; backdrop-filter: blur(3px); }
         .ov.on { display:flex; }
         .mo { background:white; padding:25px; border-radius:24px; width:90%; max-width:400px; }
@@ -159,7 +175,7 @@
 </head>
 <body>
 
-<div id="ld" style="text-align:center; padding-top:100px;">Chargement de vos finances...</div>
+<div id="ld" style="text-align:center; padding-top:100px;">Initialisation...</div>
 
 <div id="ap" style="display:none; flex-direction:column;">
     <nav class="tnav">
@@ -168,12 +184,13 @@
             <div class="ntab on" onclick="showPage('db')">🏠 Accueil</div>
             <div class="ntab" onclick="showPage('tx')">💳 Historique</div>
             <div class="ntab" onclick="showPage('plans')">📊 Plans</div>
+            <div class="ntab" onclick="showPage('param')">⚙️ Paramètres</div>
         </div>
     </nav>
 
     <div class="cnt">
         <div class="pg on" id="pg-db">
-            <h2 style="margin-bottom:20px;">Tableau de bord</h2>
+            <h2 style="margin-bottom:20px;">Bonjour 👋</h2>
             <div class="home-grid">
                 <button class="h-card bg" onclick="oaTx('revenu')">💰 Revenu</button>
                 <button class="h-card br" onclick="oaTx('depense')">💸 Dépense</button>
@@ -188,8 +205,17 @@
         </div>
 
         <div class="pg" id="pg-plans">
-            <h3>Dépenses par Plan</h3>
+            <h3>Dépenses cumulées</h3>
             <div id="plan-stats"></div>
+        </div>
+
+        <div class="pg" id="pg-param">
+            <h3>Paramètres & Données</h3>
+            <div class="stat-card" style="border-left-color: var(--b); cursor: pointer;" onclick="exportExcel()">
+                <strong>📥 Exporter mes données (.xlsx)</strong>
+                <p style="margin:5px 0 0; font-size:12px; color:var(--s5)">Télécharge toutes tes transactions dans un fichier Excel.</p>
+            </div>
+            <button class="btn" style="background:var(--r); color:white; width:100%; margin-top:20px;" onclick="auth.signOut()">Se déconnecter</button>
         </div>
     </div>
 </div>
