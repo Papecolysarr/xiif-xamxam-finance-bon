@@ -6,6 +6,7 @@
 <title>Xiif XamXam Finances + Business</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>window._fbReady=new Promise(r=>{window._fbResolve=r;});</script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -264,6 +265,34 @@ input[type=range]{width:100%;accent-color:var(--g);}
   .sal-bn{flex-direction:column;}.sal-bt{width:100%;justify-content:center;}
 }
 @media(min-width:769px){.ttabs{display:none;}}
+
+/* V3 - Graphiques, Alertes, Objectifs, PWA, IA */
+.chart-wrap{position:relative;height:220px;margin:12px 0;}
+.alert-bar{background:var(--rl);border:1px solid var(--rm);border-radius:var(--r8);padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.alert-bar .ab-ico{font-size:16px;flex-shrink:0;}
+.alert-bar .ab-txt{font-size:13px;color:var(--r);font-weight:600;flex:1;}
+.alert-bar.warn{background:var(--al);border-color:#FDE68A;}
+.alert-bar.warn .ab-txt{color:var(--am);}
+.obj-card{background:var(--w);border:1.5px solid var(--s2);border-radius:var(--r12);padding:14px;margin-bottom:10px;}
+.obj-name{font-size:14px;font-weight:700;color:var(--s8);}
+.obj-prog-wrap{margin:10px 0 4px;}
+.obj-prog-bg{height:10px;background:var(--s1);border-radius:99px;overflow:hidden;}
+.obj-prog-fill{height:100%;border-radius:99px;transition:.4s;}
+.rec-item{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:11px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.rec-ico{width:34px;height:34px;border-radius:50%;background:var(--bl);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.ia-box{background:linear-gradient(135deg,#0F172A,#1E293B);border-radius:var(--r16);padding:20px;color:var(--w);margin-bottom:18px;}
+.ia-resp{background:var(--s0);border:1px solid var(--s2);border-radius:var(--r12);padding:16px;font-size:13px;line-height:1.7;color:var(--s7);margin-top:12px;white-space:pre-wrap;}
+.fact-pill{display:inline-flex;align-items:center;gap:5px;background:var(--cyl);color:var(--cy);border-radius:99px;padding:4px 12px;font-size:12px;font-weight:700;margin:3px;}
+.inv-card{background:var(--w);border:1.5px solid var(--s2);border-radius:var(--r12);padding:14px;margin-bottom:10px;}
+.inv-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.inv-num{font-size:12px;font-weight:700;color:var(--s4);}
+.inv-client{font-size:15px;font-weight:800;color:var(--s8);}
+.inv-status{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;}
+.inv-status.paye{background:var(--gl);color:var(--g);}
+.inv-status.attente{background:var(--al);color:var(--am);}
+.inv-status.envoye{background:var(--bl);color:var(--b);}
+.pdf-btn{background:var(--rl);color:var(--r);border:1.5px solid var(--rm);border-radius:var(--r8);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;}
+.pdf-btn:hover{background:var(--rm);}
 </style>
 </head>
 <body>
@@ -341,17 +370,17 @@ input[type=range]{width:100%;accent-color:var(--g);}
         <div class="sni" onclick="gp('dettes')" data-p="dettes"><span class="ico">⚠️</span><span class="lbl">Dettes</span><span class="badge" id="sb-det">10%</span></div>
         <div class="sni" onclick="gp('conso')" data-p="conso"><span class="ico">🛒</span><span class="lbl">Consommation</span><span class="badge" id="sb-con">65%</span></div>
         <div class="sdiv"></div>
+        <div class="sni" onclick="gp('charts')" data-p="charts"><span class="ico">📊</span><span class="lbl">Graphiques</span></div>
+        <div class="sni" onclick="gp('objectifs')" data-p="objectifs"><span class="ico">🎯</span><span class="lbl">Objectifs épargne</span></div>
+        <div class="sni" onclick="gp('recurrentes')" data-p="recurrentes"><span class="ico">🔄</span><span class="lbl">Récurrentes</span></div>
+        <div class="sni" onclick="gp('ia')" data-p="ia"><span class="ico">🤖</span><span class="lbl">Analyse IA</span></div>
+        <div class="sdiv"></div>
         <div class="sni" onclick="gp('export')" data-p="export"><span class="ico">⬇️</span><span class="lbl">Export Excel</span></div>
         <div class="sni" onclick="gp('param')" data-p="param"><span class="ico">⚙️</span><span class="lbl">Paramètres</span></div>
       </nav>
       <div class="sb-bot">
         <label><span class="sdo" id="sdo"></span> Mois actif</label>
-        <select id="msel" onchange="chMois(this.value)">
-          <option value="0">Mars 2026</option><option value="1">Avril 2026</option>
-          <option value="2">Mai 2026</option><option value="3">Juin 2026</option>
-          <option value="4">Juillet 2026</option><option value="5">Août 2026</option>
-          <option value="6">Septembre 2026</option>
-        </select>
+        <select id="msel" onchange="chMois(this.value)"></select>
       </div>
     </aside>
     <!-- SIDEBAR BIZ -->
@@ -371,6 +400,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
         <div class="sni" onclick="gpB('biz-charges')" data-bp="biz-charges"><span class="ico">💸</span><span class="lbl">Charges fixes</span></div>
         <div class="sni" onclick="gpB('biz-fou')" data-bp="biz-fou"><span class="ico">🏭</span><span class="lbl">Fournisseurs &amp; Stock</span></div>
         <div class="sni" onclick="gpB('biz-sal')" data-bp="biz-sal"><span class="ico">💰</span><span class="lbl">Mon salaire</span></div>
+        <div class="sni" onclick="gpB('biz-factures')" data-bp="biz-factures"><span class="ico">🧾</span><span class="lbl">Factures &amp; Devis</span></div>
         <div class="sni" onclick="gpB('biz-set')" data-bp="biz-set"><span class="ico">⚙️</span><span class="lbl">Mes business</span></div>
       </nav>
       <div class="sb-bot">
@@ -378,12 +408,7 @@ input[type=range]{width:100%;accent-color:var(--g);}
         <select id="bsel" onchange="chBiz(this.value)"></select>
         <div style="height:8px;"></div>
         <label><span class="sdo" id="sdo-b"></span> Mois</label>
-        <select id="mselb" onchange="chMoisB(this.value)">
-          <option value="0">Mars 2026</option><option value="1">Avril 2026</option>
-          <option value="2">Mai 2026</option><option value="3">Juin 2026</option>
-          <option value="4">Juillet 2026</option><option value="5">Août 2026</option>
-          <option value="6">Septembre 2026</option>
-        </select>
+        <select id="mselb" onchange="chMoisB(this.value)"></select>
       </div>
     </aside>
     <!-- MAIN CONTENT -->
@@ -490,6 +515,40 @@ input[type=range]{width:100%;accent-color:var(--g);}
       <div class="pg" id="pg-biz-set">
         <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">⚙️ Mes Business</div>
         <div id="bizsett"></div>
+      </div>
+      <!-- PAGE GRAPHIQUES -->
+      <div class="pg" id="pg-charts">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">📊 Graphiques &amp; Évolution</div>
+        <div id="charts-content"></div>
+      </div>
+      <!-- PAGE OBJECTIFS ÉPARGNE -->
+      <div class="pg" id="pg-objectifs">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">🎯 Objectifs d'Épargne</div>
+          <button class="btn bg" onclick="oNewObj()">+ Nouvel objectif</button>
+        </div>
+        <div id="obj-content"></div>
+      </div>
+      <!-- PAGE TRANSACTIONS RÉCURRENTES -->
+      <div class="pg" id="pg-recurrentes">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">🔄 Transactions Récurrentes</div>
+          <button class="btn bg" onclick="oNewRec()">+ Nouvelle récurrence</button>
+        </div>
+        <div id="rec-content"></div>
+      </div>
+      <!-- PAGE ANALYSE IA -->
+      <div class="pg" id="pg-ia">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">🤖 Analyse IA</div>
+        <div id="ia-content"></div>
+      </div>
+      <!-- PAGE FACTURES BIZ -->
+      <div class="pg" id="pg-biz-factures">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">🧾 Factures &amp; Devis</div>
+          <button class="btn bcy" onclick="oNewFacture()">+ Nouvelle facture</button>
+        </div>
+        <div id="factures-list"></div>
       </div>
     </div>
   </div>
@@ -721,7 +780,16 @@ input[type=range]{width:100%;accent-color:var(--g);}
 // ============================================================
 // CONSTANTS
 // ============================================================
-const MN=['Mars 2026','Avril 2026','Mai 2026','Juin 2026','Juillet 2026','Août 2026','Septembre 2026'];
+// Dynamic month system - generates 12 months from a base
+const MONTH_NAMES=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+function genMonths(baseYear,baseMonth,count){
+  const r=[];for(let i=0;i<count;i++){const d=new Date(baseYear,baseMonth+i,1);r.push({label:MONTH_NAMES[d.getMonth()]+' '+d.getFullYear(),key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')});}return r;
+}
+let MN_BASE={year:2026,month:2}; // March 2026 default
+let MN_COUNT=12;
+let MNS=genMonths(MN_BASE.year,MN_BASE.month,MN_COUNT);
+function MN_label(i){return MNS[i]?.label||'?';}
+const MN=['Mars 2026','Avril 2026','Mai 2026','Juin 2026','Juillet 2026','Août 2026','Septembre 2026']; // kept for compat
 const DP={don:.10,epargne:.10,invest:.05,dette:.10,conso:.65};
 const PC={
   don:{lb:'Plan Don',ic:'🤲',co:'#D97706',bg:'#FEF3C7',bge:'bga'},
@@ -754,9 +822,9 @@ let eCmdId=null,eChgId=null,eFouId=null,cvLines=[];
 // DATA MODELS
 // ============================================================
 function dM(){return{revenus:[],items:Object.fromEntries(PK.map(k=>[k,(DI[k]||[]).map(n=>({id:uid(),name:n,bp:0,dep:0}))])),dettes:[],depenses:[]};}
-function dS(){return{mois:Array.from({length:7},()=>dM()),par:{},businesses:[]};}
+function dS(){return{mois:Array.from({length:12},()=>dM()),par:{},businesses:[],objectifs:[],recurrentes:[],mnBase:{year:2026,month:2}};}
 function dBM(){return{commandes:[],charges:[],versements:[]};}
-function dBiz(nom,type,desc,sal){return{id:uid(),nom,type,desc,salPrev:sal||0,fournisseurs:[],mois:Array.from({length:7},()=>dBM())};}
+function dBiz(nom,type,desc,sal){return{id:uid(),nom,type,desc,salPrev:sal||0,fournisseurs:[],mois:Array.from({length:12},()=>dBM())};}
 function M(){return S.mois[mi];}
 function B(){return S.businesses?.find(b=>b.id===curBizId)||null;}
 function BM(){const b=B();return b?b.mois[bmi]:null;}
@@ -803,7 +871,7 @@ async function ldData(uid2){
     const sn=await getDoc(doc(db,'users',uid2));
     S=sn.exists()?JSON.parse(JSON.stringify(sn.data())):dS();
     if(!S.par)S.par={};if(!S.mois)S.mois=[];if(!S.businesses)S.businesses=[];
-    while(S.mois.length<7)S.mois.push(dM());
+    while(S.mois.length<12)S.mois.push(dM());
     S.mois.forEach(m=>{
       if(!m.revenus)m.revenus=[];if(!m.depenses)m.depenses=[];if(!m.dettes)m.dettes=[];if(!m.items)m.items={};
       PK.forEach(k=>{
@@ -818,15 +886,20 @@ async function ldData(uid2){
     });
     S.businesses.forEach(b=>{
       if(!b.id)b.id=uid();if(!b.fournisseurs)b.fournisseurs=[];if(!b.mois)b.mois=[];
-      while(b.mois.length<7)b.mois.push(dBM());
+      while(b.mois.length<12)b.mois.push(dBM());
       b.mois.forEach(bm=>{if(!bm.commandes)bm.commandes=[];if(!bm.charges)bm.charges=[];if(!bm.versements)bm.versements=[];});
     });
+    if(!S.objectifs)S.objectifs=[];
+    if(!S.recurrentes)S.recurrentes=[];
+    if(!S.mnBase)S.mnBase={year:2026,month:2};
+    MN_BASE=S.mnBase;MNS=genMonths(MN_BASE.year,MN_BASE.month,12);
+    populateMnSel();
     if(S.businesses.length>0&&!curBizId)curBizId=S.businesses[0].id;
     const ini=(cu.displayName||cu.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     document.getElementById('uav').textContent=ini;
     document.getElementById('unm').textContent=cu.displayName||cu.email.split('@')[0];
     ['txdt','pdat','ret-dt','nd-dt','cmd-dt','sal-dt','fou-dt'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=td();});
-    showScreen('app');updSB();updBSel();gp('db');
+    showScreen('app');updSB();updBSel();populateMnSel();gp('db');
     if(sn.exists())persist();
   }catch(x){console.error(x);showScreen('auth');}
 }
@@ -893,6 +966,8 @@ function gp(p){
   document.getElementById('pg-'+p)?.classList.add('on');
   document.querySelector(`[data-p="${p}"]`)?.classList.add('on');
   if(window.innerWidth<=768)document.getElementById('sb')?.classList.remove('mob');
+  // Clean stale alert div on every page switch
+  document.getElementById('dash-alerts')?.remove();
   rp(p);
 }
 function chMois(v){mi=parseInt(v);rp(cp);}
@@ -901,6 +976,8 @@ function rp(p){
   if(p==='db')rDash();else if(p==='tx')rTx();else if(p==='plans')rPlans();
   else if(['don','epargne','invest','conso'].includes(p))rPS(p);
   else if(p==='dettes')rDettes();else if(p==='export')rExp();else if(p==='param')rParam();
+  else if(p==='charts')rCharts();else if(p==='objectifs')rObjectifs();
+  else if(p==='recurrentes')rRecurrentes();else if(p==='ia')rIA();
 }
 
 // ============================================================
@@ -908,10 +985,17 @@ function rp(p){
 // ============================================================
 function rDash(){
   const rev=tRev(mi),m=M(),t=td();
-  document.getElementById('dbtit').textContent='Tableau de bord — '+MN[mi];
+  document.getElementById('dbtit').textContent='Tableau de bord — '+MNS[mi]?.label||MN[mi]||'';
   const rt=(m.revenus||[]).filter(r=>r.date===t).reduce((s,r)=>s+r.amount,0);
   const dt2=(m.depenses||[]).filter(d=>d.date===t).reduce((s,d)=>s+d.amount,0);
   const tdp=PK.reduce((s,k)=>s+pDep(mi,k),0),sol=rev-tdp;
+  // Alert banners for budget overruns
+  const alerts=PK.map(k=>{const b2=bgt(mi,k),d2=pDep(mi,k),pct2=b2>0?d2/b2*100:0;return{k,b2,d2,pct2};}).filter(a=>a.pct2>=90&&a.b2>0);
+  const alertHtml=alerts.map(a=>`<div class="alert-bar ${a.pct2>=100?'':'warn'}">
+    <span class="ab-ico">${a.pct2>=100?'🚨':'⚠️'}</span>
+    <span class="ab-txt">${PC[a.k].ic} ${PC[a.k].lb} : ${a.pct2.toFixed(0)}% utilisé (${f(a.d2)} / ${f(a.b2)} FCFA)${a.pct2>=100?' — DÉPASSÉ !':' — Proche de la limite'}</span>
+  </div>`).join('');
+  if(alertHtml)document.getElementById('dbtit').insertAdjacentHTML('afterend','<div id="dash-alerts" style="margin-top:12px;">'+alertHtml+'</div>');
   document.getElementById('dbkpi').innerHTML=[
     ['Revenus du mois',f(rev),'FCFA','var(--g)'],
     ['Dépenses du mois',f(tdp),'FCFA','var(--r)'],
@@ -919,7 +1003,7 @@ function rDash(){
     ['Revenus aujourd\'hui',f(rt),'FCFA','var(--g)'],
     ['Dépenses aujourd\'hui',f(dt2),'FCFA','var(--r)'],
     ['Épargne',f(pDep(mi,'epargne')),'FCFA','var(--b)'],
-  ].map(([l,v,u,c],i)=>`<div class="kpi" style="border-left:4px solid ${c}"><div class="kl">${l}</div><div class="kv" style="color:${c}">${v}</div><div class="ks">${u}</div></div>`).join('');
+  ].map(([l,v,u,c])=>`<div class="kpi" style="border-left:4px solid ${c}"><div class="kl">${l}</div><div class="kv" style="color:${c}">${v}</div><div class="ks">${u}</div></div>`).join('');
   document.getElementById('dbplans').innerHTML=PK.map(k=>{
     const b=bgt(mi,k),d=pDep(mi,k),pct=b>0?Math.min(100,d/b*100):0,s=b-d;
     return`<div class="pchip" style="background:${PC[k].bg};border-color:${PC[k].co}33" onclick="gp('${k==='dette'?'dettes':k}')">
@@ -932,7 +1016,7 @@ function rDash(){
   const rec=aTx(mi).slice(0,8);
   const el=document.getElementById('dbrec');
   el.innerHTML=rec.length?'<div class="txl">'+rec.map(tx=>txH(tx,false)).join('')+'</div>':'<div class="est"><div class="eico">💳</div><p>Aucune transaction.</p></div>';
-  updSB();
+  updSB();updSBAlerts();
 }
 
 // ============================================================
@@ -1052,7 +1136,7 @@ function rDettes(){
     <div class="kpi" style="border-left:4px solid ${sol>=0?'var(--g)':'var(--r)'}"><div class="kl">Solde dispo.</div><div class="kv" style="color:${sol>=0?'var(--g)':'var(--r)'}">${f(sol)}</div><div class="ks">FCFA</div></div>
     <div class="kpi" style="border-left:4px solid var(--pu)"><div class="kl">Nb. dettes</div><div class="kv" style="color:var(--pu)">${(m.dettes||[]).length}</div><div class="ks">${(m.dettes||[]).filter(d=>d.total-d.paye<=0).length} soldée(s)</div></div>
   </div>`;
-  if(!(m.dettes||[]).length){el.innerHTML=sum+`<div class="est"><div class="eico">✅</div><p>Aucune dette pour ${MN[mi]}.</p></div>`;return;}
+  if(!(m.dettes||[]).length){el.innerHTML=sum+`<div class="est"><div class="eico">✅</div><p>Aucune dette pour ${MNS[mi]?.label||'ce mois'}.</p></div>`;return;}
   el.innerHTML=sum+`<div class="dgrid">${(m.dettes||[]).map(d=>{
     const rs=d.total-d.paye,pp=d.total>0?Math.min(100,d.paye/d.total*100):0;
     return`<div class="dc ${pp>=100?'ok':''}">
@@ -1131,7 +1215,7 @@ function sePlan(el,v){exPl=v;document.querySelectorAll('#efpl .ec').forEach(c=>c
 function exRows(){
   let ms=[];
   if(exPer==='mois')ms=[mi];else if(exPer==='3mois')ms=Array.from({length:3},(_,i)=>Math.max(0,mi-2+i));
-  else if(exPer==='6mois')ms=Array.from({length:6},(_,i)=>Math.max(0,mi-5+i));else ms=Array.from({length:7},(_,i)=>i);
+  else if(exPer==='6mois')ms=Array.from({length:6},(_,i)=>Math.max(0,mi-5+i));else ms=Array.from({length:S.mois.length},(_,i)=>i);
   ms=[...new Set(ms)].filter(x=>x>=0&&x<7);
   const rows=[];
   ms.forEach(x=>{
@@ -1154,7 +1238,7 @@ function doExp(){
   const rows=exRows();if(!rows.length){toast('Aucune donnée','er');return;}
   const ws=XLSX.utils.json_to_sheet(rows);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Transactions');
-  const sr=MN.map((_,i)=>{const rv=tRev(i),dp=PK.reduce((s,k)=>s+pDep(i,k),0);return{Mois:MN[i],Revenus:rv,Dépenses:dp,Solde:rv-dp,...Object.fromEntries(PK.map(k=>[PC[k].lb,pDep(i,k)]))};});
+  const sr=MNS.map((_,i)=>{const rv=tRev(i),dp=PK.reduce((s,k)=>s+pDep(i,k),0);return{Mois:MN[i],Revenus:rv,Dépenses:dp,Solde:rv-dp,...Object.fromEntries(PK.map(k=>[PC[k].lb,pDep(i,k)]))};});
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sr),'Synthèse');
   XLSX.writeFile(wb,'XiifXamXam_'+td()+'.xlsx');toast('Export téléchargé ✓','sg');
 }
@@ -1213,6 +1297,7 @@ function rpB(p){
   if(!S)return;
   if(p==='biz-db')rBDB();else if(p==='biz-cmd')rBCmd();else if(p==='biz-charges')rBChg();
   else if(p==='biz-fou')rBFou();else if(p==='biz-sal')rBSal();else if(p==='biz-set')rBSet();
+  else if(p==='biz-factures')rBFactures();
 }
 
 // BIZ CALC HELPERS
@@ -1237,7 +1322,7 @@ function rBDB(){
   el.innerHTML=`
     <div class="biz-hdr">
       <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${BT[b.type]||'📦'} ${es(b.nom)}</div>
-      <div style="font-size:22px;font-weight:800;margin-bottom:4px;">Dashboard — ${MN[bmi]}</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:4px;">Dashboard — ${MNS[bmi]?.label||MN[bmi]||''}</div>
       <div style="font-size:13px;color:#94A3B8;">${es(b.desc||'')}</div>
     </div>
     <div class="kg">
@@ -1249,7 +1334,7 @@ function rBDB(){
       <div class="kpi" style="border-left:4px solid var(--b)"><div class="kl">Commandes</div><div class="kv" style="color:var(--b)">${nbCmd}</div><div class="ks">${nbEC} en cours</div></div>
     </div>
     <div class="sal-bn">
-      <div><div class="sl">💰 Salaire dirigeant — ${MN[bmi]}</div><div class="sa">${f(vers)} FCFA versés</div><div class="ss">Prévu : ${f(b.salPrev||0)} FCFA · Bénéfice net : ${f(ben)} FCFA</div></div>
+      <div><div class="sl">💰 Salaire dirigeant — ${MNS[bmi]?.label||MN[bmi]||''}</div><div class="sa">${f(vers)} FCFA versés</div><div class="ss">Prévu : ${f(b.salPrev||0)} FCFA · Bénéfice net : ${f(ben)} FCFA</div></div>
       <button class="sal-bt" onclick="oSal()">💸 Se verser son salaire →</button>
     </div>
     <div class="card">
@@ -1344,7 +1429,7 @@ function rBChg(){
   const el=document.getElementById('chglist');const bi=getBi();
   if(bi<0){el.innerHTML='<div class="est"><div class="eico">💸</div><p>Sélectionnez un business.</p></div>';return;}
   const b=S.businesses[bi];const charges=b.mois[bmi]?.charges||[];const total=bCF(bi,bmi);
-  if(!charges.length){el.innerHTML=`<div class="ib ib-cy mb4"><span>ℹ️</span><span>Les charges fixes (loyer, électricité, salaires…) sont les coûts récurrents de votre business indépendamment des commandes.</span></div><div class="est"><div class="eico">💸</div><p>Aucune charge fixe pour ${MN[bmi]}.</p><button class="btn bcy mt3" onclick="oNewCharge()">+ Ajouter la première charge</button></div>`;return;}
+  if(!charges.length){el.innerHTML=`<div class="ib ib-cy mb4"><span>ℹ️</span><span>Les charges fixes (loyer, électricité, salaires…) sont les coûts récurrents de votre business indépendamment des commandes.</span></div><div class="est"><div class="eico">💸</div><p>Aucune charge fixe pour ${MNS[bmi]?.label||'ce mois'}.</p><button class="btn bcy mt3" onclick="oNewCharge()">+ Ajouter la première charge</button></div>`;return;}
   el.innerHTML=`<div class="kpi mb4" style="border-left:4px solid var(--am);max-width:280px;"><div class="kl">Total charges fixes ce mois</div><div class="kv" style="color:var(--am)">${f(total)}</div><div class="ks">FCFA</div></div>
   <div class="chg-g">${charges.map(c=>`<div class="chg-i">
     <div class="flex aic jb"><div><div style="font-size:13px;font-weight:700;">${CI[c.ct]||'📋'} ${es(c.nm)}</div><div class="txs tmu mt2"><span class="bge bga">${c.fr||'mensuel'}</span></div></div>
@@ -1408,11 +1493,11 @@ function rBSal(){
     <div class="vi"><div class="vico">💸</div>
     <div style="flex:1;"><div style="font-size:14px;font-weight:700;">${f(v.mt)} FCFA</div>
     <div class="txs tmu">${v.dt||''} · ${es(v.nt||'Salaire dirigeant')}</div>
-    <div class="txs mt2"><span class="bge bgg">→ Ajouté aux revenus personnels (${MN[mi]})</span></div></div>
+    <div class="txs mt2"><span class="bge bgg">→ Ajouté aux revenus personnels (${MNS[mi]?.label||MN[mi]||''})</span></div></div>
     <button class="bico dl" onclick="cDelVers('${v.id}')">🗑️</button></div>`).join(''):'<div class="est"><div class="eico">💰</div><p>Aucun versement ce mois.</p></div>';
   el.innerHTML=`
     <div class="sal-bn">
-      <div><div class="sl">💰 Salaire dirigeant — ${MN[bmi]}</div><div class="sa">${f(vers)} FCFA versés</div><div class="ss">Bénéfice net : ${f(ben)} FCFA · Salaire prévu : ${f(b.salPrev||0)} FCFA/mois</div></div>
+      <div><div class="sl">💰 Salaire dirigeant — ${MNS[bmi]?.label||MN[bmi]||''}</div><div class="sa">${f(vers)} FCFA versés</div><div class="ss">Bénéfice net : ${f(ben)} FCFA · Salaire prévu : ${f(b.salPrev||0)} FCFA/mois</div></div>
       <button class="sal-bt" onclick="oSal()">💸 Se verser son salaire →</button>
     </div>
     <div class="card mb4">
@@ -1423,15 +1508,15 @@ function rBSal(){
         <div class="kpi f1" style="border-left:4px solid var(--pu);min-width:120px;"><div class="kl">Déjà versé</div><div class="kv" style="color:var(--pu)">${f(vers)}</div><div class="ks">FCFA ce mois</div></div>
       </div>
     </div>
-    <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px;">Historique des versements — ${MN[bmi]}</div>${hist}</div>`;
+    <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px;">Historique des versements — ${MNS[bmi]?.label||MN[bmi]||''}</div>${hist}</div>`;
 }
 function oSal(){
   const bi=getBi();if(bi<0){toast('Sélectionnez un business','er');return;}
   const b=S.businesses[bi];const ben=bBen(bi,bmi),vers=bVers(bi,bmi);
-  document.getElementById('sal-inf').innerHTML=`<div><strong>💰 ${es(b.nom)}</strong> — ${MN[bmi]}</div><div style="font-size:12px;margin-top:4px;">Bénéfice net : <strong style="color:var(--g)">${f(ben)} FCFA</strong> · Déjà versé : <strong>${f(vers)} FCFA</strong></div><div style="font-size:12px;">Salaire prévu : <strong>${f(b.salPrev||0)} FCFA/mois</strong></div>`;
+  document.getElementById('sal-inf').innerHTML=`<div><strong>💰 ${es(b.nom)}</strong> — ${MNS[bmi]?.label||MN[bmi]||''}</div><div style="font-size:12px;margin-top:4px;">Bénéfice net : <strong style="color:var(--g)">${f(ben)} FCFA</strong> · Déjà versé : <strong>${f(vers)} FCFA</strong></div><div style="font-size:12px;">Salaire prévu : <strong>${f(b.salPrev||0)} FCFA/mois</strong></div>`;
   sv('sal-am',Math.max(0,Math.min(b.salPrev||0,Math.max(0,ben))));
-  sv('sal-dt',td());sv('sal-nt','Salaire dirigeant — '+MN[bmi]);
-  document.getElementById('sal-calc').innerHTML=`Ce montant sera automatiquement ajouté à vos <strong>revenus personnels du mois ${MN[mi]}</strong> et réparti dans vos 5 plans (Don, Épargne, Investissement, Dettes, Consommation).`;
+  sv('sal-dt',td());sv('sal-nt','Salaire dirigeant — '+MNS[bmi]?.label||MN[bmi]||'');
+  document.getElementById('sal-calc').innerHTML=`Ce montant sera automatiquement ajouté à vos <strong>revenus personnels du mois ${MNS[mi]?.label||MN[mi]||''}</strong> et réparti dans vos 5 plans (Don, Épargne, Investissement, Dettes, Consommation).`;
   ov('ov-sal');
 }
 function editSalPrev(){const bi=getBi();if(bi<0)return;const b=S.businesses[bi];const nv=prompt('Nouveau salaire prévu par mois (FCFA) :',b.salPrev||0);if(nv===null)return;b.salPrev=parseFloat(nv)||0;sch();rpB(curBizPg);toast('Salaire prévu mis à jour ✓','sg');}
@@ -1518,6 +1603,444 @@ function sErr(m){const e=document.getElementById('aerr');e.textContent=m;e.class
 function hErr(){document.getElementById('aerr').classList.remove('on');}
 function stab(t){document.getElementById('tl').classList.toggle('on',t==='l');document.getElementById('tr2').classList.toggle('on',t==='r');document.getElementById('fl').style.display=t==='l'?'flex':'none';document.getElementById('fr').style.display=t==='r'?'flex':'none';hErr();}
 function fE(c){const m={'auth/email-already-in-use':'Email déjà utilisé','auth/invalid-email':'Email invalide','auth/wrong-password':'Email ou mot de passe incorrect','auth/user-not-found':'Compte introuvable','auth/weak-password':'Mot de passe trop faible','auth/invalid-credential':'Email ou mot de passe incorrect'};return m[c]||'Erreur : '+c;}
+
+
+// ============================================================
+// V3 - DYNAMIC MONTHS
+// ============================================================
+function populateMnSel(){
+  const opts=MNS.map((m,i)=>`<option value="${i}"${i===mi?' selected':''}>${m.label}</option>`).join('');
+  ['msel','mselb'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=opts;});
+}
+function getCurrentMonthIdx(){
+  const now=new Date(),yr=now.getFullYear(),mo=now.getMonth();
+  return MNS.findIndex(m=>m.key===yr+'-'+String(mo+1).padStart(2,'0'));
+}
+
+// ============================================================
+// V3 - GRAPHIQUES (Chart.js)
+// ============================================================
+let chartRevDep=null,chartPlans=null,chartBizCA=null;
+function rCharts(){
+  const el=document.getElementById('charts-content');
+  const labels=MNS.slice(0,Math.min(12,S.mois.length)).map(m=>m.label);
+  const revs=MNS.slice(0,labels.length).map((_,i)=>tRev(i));
+  const deps=MNS.slice(0,labels.length).map((_,i)=>PK.reduce((s,k)=>s+pDep(i,k),0));
+  const sols=revs.map((r,i)=>r-deps[i]);
+  const hasData=revs.some(v=>v>0)||deps.some(v=>v>0);
+  el.innerHTML=`
+    <div class="card mb4">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Revenus vs Dépenses — évolution mensuelle</div>
+      <div class="tsm tmu mb3">Tous les mois</div>
+      <div class="chart-wrap"><canvas id="chart-revdep"></canvas></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:18px;">
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Solde mensuel</div>
+        <div class="chart-wrap" style="height:160px;"><canvas id="chart-solde"></canvas></div>
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Répartition des plans — ${MNS[mi].label}</div>
+        <div class="chart-wrap" style="height:160px;"><canvas id="chart-plans"></canvas></div>
+      </div>
+    </div>
+    ${buildBizChartHTML()}`;
+  setTimeout(()=>{
+    if(!hasData){return;}
+    // Revenus vs Dépenses
+    const ctx1=document.getElementById('chart-revdep')?.getContext('2d');
+    if(ctx1){
+      if(chartRevDep)chartRevDep.destroy();
+      chartRevDep=new Chart(ctx1,{type:'bar',data:{labels,datasets:[
+        {label:'Revenus',data:revs,backgroundColor:'rgba(22,163,74,.7)',borderRadius:4},
+        {label:'Dépenses',data:deps,backgroundColor:'rgba(220,38,38,.7)',borderRadius:4},
+      ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{ticks:{callback:v=>f(v)+' F'}}}}});
+    }
+    // Solde
+    const ctx2=document.getElementById('chart-solde')?.getContext('2d');
+    if(ctx2){
+      new Chart(ctx2,{type:'line',data:{labels,datasets:[{label:'Solde',data:sols,borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>f(v)+' F'}}}}});
+    }
+    // Plans pie
+    const ctx3=document.getElementById('chart-plans')?.getContext('2d');
+    if(ctx3){
+      const planVals=PK.map(k=>pDep(mi,k));
+      const planColors=['#D97706','#16A34A','#2563EB','#DC2626','#7C3AED'];
+      new Chart(ctx3,{type:'doughnut',data:{labels:PK.map(k=>PC[k].lb),datasets:[{data:planVals,backgroundColor:planColors,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}}}}});
+    }
+    // Biz chart
+    if(S.businesses?.length){
+      const bi=getBi();if(bi<0)return;
+      const caData=MNS.slice(0,Math.min(12,S.businesses[bi].mois.length)).map((_,i)=>bCA(bi,i));
+      const benData=MNS.slice(0,caData.length).map((_,i)=>bBen(bi,i));
+      const ctx4=document.getElementById('chart-biz')?.getContext('2d');
+      if(ctx4){
+        new Chart(ctx4,{type:'bar',data:{labels:labels.slice(0,caData.length),datasets:[
+          {label:'CA',data:caData,backgroundColor:'rgba(8,145,178,.7)',borderRadius:4},
+          {label:'Bénéfice net',data:benData,backgroundColor:'rgba(22,163,74,.7)',borderRadius:4},
+        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{ticks:{callback:v=>f(v)+' F'}}}}});
+      }
+    }
+  },100);
+}
+function buildBizChartHTML(){
+  if(!S.businesses?.length)return'';
+  const bi=getBi();if(bi<0)return'';
+  return`<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:4px;">Business : CA vs Bénéfice net</div><div class="tsm tmu mb3">${es(S.businesses[bi].nom)}</div><div class="chart-wrap"><canvas id="chart-biz"></canvas></div></div>`;
+}
+
+// ============================================================
+// V3 - OBJECTIFS D'ÉPARGNE
+// ============================================================
+function rObjectifs(){
+  const el=document.getElementById('obj-content');
+  const objs=S.objectifs||[];
+  const totalEp=S.mois.reduce((s,_,i)=>s+pDep(i,'epargne'),0);
+  if(!objs.length){
+    el.innerHTML=`<div class="ib ib-g mb4"><span>💡</span><span>Définissez vos objectifs d'épargne (Hajj, maison, voiture…) et suivez votre progression grâce à votre épargne cumulée.</span></div>
+    <div class="est"><div class="eico">🎯</div><p>Aucun objectif.</p><button class="btn bg mt3" onclick="oNewObj()">+ Créer mon premier objectif</button></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="kpi mb4" style="border-left:4px solid var(--b);max-width:280px;"><div class="kl">Épargne cumulée totale</div><div class="kv" style="color:var(--b)">${f(totalEp)}</div><div class="ks">FCFA sur tous les mois</div></div>
+  ${objs.map(obj=>{
+    const pct=obj.cible>0?Math.min(100,(obj.epargneActuelle||totalEp)/obj.cible*100):0;
+    const reste=Math.max(0,obj.cible-(obj.epargneActuelle||totalEp));
+    const moisRestants=obj.mensualite>0?Math.ceil(reste/obj.mensualite):null;
+    return`<div class="obj-card">
+      <div class="flex aic jb mb3">
+        <div><div class="obj-name">${obj.icone||'🎯'} ${es(obj.nom)}</div><div class="txs tmu mt2">Objectif : <strong>${f(obj.cible)} FCFA</strong></div></div>
+        <div class="flex gi2"><button class="bico ed" onclick="oEditObj('${obj.id}')">✏️</button><button class="bico dl" onclick="cDelObj('${obj.id}','${es(obj.nom)}')">🗑️</button></div>
+      </div>
+      <div class="obj-prog-wrap">
+        <div class="flex jb txs tmu mb2"><span>${f(obj.epargneActuelle||totalEp)} FCFA épargnés</span><span style="font-weight:700;color:${pct>=100?'var(--g)':'var(--b)'}">${pct.toFixed(0)}%</span></div>
+        <div class="obj-prog-bg"><div class="obj-prog-fill" style="width:${pct}%;background:${pct>=100?'var(--g)':'var(--b)'}"></div></div>
+      </div>
+      <div class="flex gi2 fw mt3 txs tmu">
+        <span>Reste : <strong style="color:var(--r)">${f(reste)} FCFA</strong></span>
+        ${moisRestants?`<span>· ~${moisRestants} mois à ${f(obj.mensualite)} FCFA/mois</span>`:''}
+        ${obj.dateLimit?`<span>· Échéance : ${obj.dateLimit}</span>`:''}
+      </div>
+      ${pct>=100?'<div class="tsm fb tg mt3" style="text-align:center">🎉 Objectif atteint !</div>':''}
+    </div>`;
+  }).join('')}`;
+}
+function oNewObj(){
+  eObjId=null;
+  const icons=['🕌','🏠','🚗','✈️','💻','📱','🎓','💍','🏪','🌱','💰','🎯'];
+  const picked=icons[Math.floor(Math.random()*icons.length)];
+  const modal=`<div class="ov on" id="ov-obj"><div class="mo"><h2>🎯 Nouvel objectif d'épargne</h2><div class="mof">
+    <div class="fl"><label>Nom de l'objectif</label><input id="obj-nm" placeholder="Ex: Hajj 2027, Achat terrain…"/></div>
+    <div class="fl"><label>Icône</label><select id="obj-ic">${icons.map(ic=>`<option value="${ic}"${ic===picked?' selected':''}>${ic} ${ic}</option>`).join('')}</select></div>
+    <div class="fl"><label>Montant cible (FCFA)</label><input id="obj-ci" type="number" placeholder="1500000" min="1"/></div>
+    <div class="fl"><label>Épargne actuelle dédiée (FCFA)</label><input id="obj-ea" type="number" placeholder="0" value="0"/></div>
+    <div class="fl"><label>Mensualité prévue (FCFA)</label><input id="obj-mn" type="number" placeholder="50000" value="0"/></div>
+    <div class="fl"><label>Date limite (optionnelle)</label><input id="obj-dl" type="date"/></div>
+    <div class="fl"><label>Note</label><input id="obj-nt" placeholder="Contexte, motivation…"/></div>
+  </div><div class="moa"><button class="btn bo" onclick="cov('ov-obj')">Annuler</button><button class="btn bg" onclick="savObj()">Enregistrer</button></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',modal);
+}
+let eObjId=null;
+function oEditObj(id){
+  const obj=S.objectifs.find(o=>o.id===id);if(!obj)return;
+  eObjId=id;oNewObj();
+  setTimeout(()=>{sv('obj-nm',obj.nom);sv('obj-ic',obj.icone||'🎯');sv('obj-ci',obj.cible);sv('obj-ea',obj.epargneActuelle||0);sv('obj-mn',obj.mensualite||0);sv('obj-dl',obj.dateLimit||'');sv('obj-nt',obj.note||'');},50);
+}
+function savObj(){
+  const nm=g('obj-nm'),ic=g('obj-ic'),ci=parseFloat(g('obj-ci'))||0,ea=parseFloat(g('obj-ea'))||0,mn=parseFloat(g('obj-mn'))||0,dl=g('obj-dl'),nt=g('obj-nt');
+  if(!nm||!ci){toast('Nom et montant cible requis','er');return;}
+  if(!S.objectifs)S.objectifs=[];
+  if(eObjId){const o=S.objectifs.find(x=>x.id===eObjId);if(o)Object.assign(o,{nom:nm,icone:ic,cible:ci,epargneActuelle:ea,mensualite:mn,dateLimit:dl,note:nt});}
+  else S.objectifs.push({id:uid(),nom:nm,icone:ic,cible:ci,epargneActuelle:ea,mensualite:mn,dateLimit:dl,note:nt});
+  cov('ov-obj');document.getElementById('ov-obj')?.remove();sch();rObjectifs();toast('Objectif enregistré ✓','sg');
+}
+function cDelObj(id,nm){
+  document.getElementById('ctxt').textContent=`Supprimer l'objectif "${nm}" ?`;
+  document.getElementById('bconf').onclick=()=>{S.objectifs=S.objectifs.filter(o=>o.id!==id);cov('ov-conf');sch();rObjectifs();};ov('ov-conf');
+}
+
+// ============================================================
+// V3 - TRANSACTIONS RÉCURRENTES
+// ============================================================
+function rRecurrentes(){
+  const el=document.getElementById('rec-content');
+  const recs=S.recurrentes||[];
+  if(!recs.length){
+    el.innerHTML=`<div class="ib ib-b mb4"><span>ℹ️</span><span>Les transactions récurrentes se répètent automatiquement chaque mois (loyer, abonnements, salaires…). Activez-les pour qu'elles s'appliquent au mois sélectionné.</span></div>
+    <div class="est"><div class="eico">🔄</div><p>Aucune transaction récurrente.</p><button class="btn bg mt3" onclick="oNewRec()">+ Créer la première</button></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="ib ib-b mb4"><span>💡</span><span>Cliquez sur <strong>Appliquer au mois</strong> pour ajouter automatiquement toutes les récurrences actives au mois sélectionné (${MNS[mi].label}).</span></div>
+  <button class="btn bg mb4" onclick="applyRec()">▶ Appliquer toutes les récurrences — ${MNS[mi].label}</button>
+  ${recs.map(r=>`<div class="rec-item">
+    <div class="rec-ico">${r.type==='revenu'?'💚':'🔴'}</div>
+    <div style="flex:1;"><div style="font-size:14px;font-weight:700;">${es(r.desc)}</div>
+    <div class="txs tmu">${r.type==='revenu'?'Revenu':'Dépense · '+es(PC[r.plan]?.lb||r.plan||'')} · ${r.freq||'mensuel'}</div></div>
+    <div style="font-size:15px;font-weight:800;color:${r.type==='revenu'?'var(--g)':'var(--r)'};">${r.type==='revenu'?'+':'-'}${f(r.amount)} FCFA</div>
+    <div class="flex gi2 ml2"><button class="bico ed" onclick="oEditRec('${r.id}')">✏️</button><button class="bico dl" onclick="cDelRec('${r.id}','${es(r.desc)}')">🗑️</button></div>
+  </div>`).join('')}`;
+}
+function oNewRec(){
+  const modal=`<div class="ov on" id="ov-rec"><div class="mo"><h2>🔄 Nouvelle transaction récurrente</h2><div class="mof">
+    <div class="fl"><label>Type</label><select id="rec-tp" onchange="this.nextElementSibling&&(document.getElementById('rec-pf').style.display=this.value==='revenu'?'none':'block')"><option value="revenu">💚 Revenu</option><option value="depense">🔴 Dépense</option></select></div>
+    <div class="fl"><label>Description</label><input id="rec-ds" placeholder="Ex: Loyer, Salaire, Abonnement…"/></div>
+    <div class="fl"><label>Montant (FCFA)</label><input id="rec-am" type="number" placeholder="150000" min="1"/></div>
+    <div class="fl" id="rec-pf"><label>Plan</label><select id="rec-pl"><option value="conso">🛒 Consommation</option><option value="epargne">💳 Épargne</option><option value="invest">📈 Investissement</option><option value="dette">⚠️ Dettes</option><option value="don">🤲 Don</option></select></div>
+    <div class="fl"><label>Fréquence</label><select id="rec-fr"><option value="mensuel">Mensuel</option><option value="trimestriel">Trimestriel</option></select></div>
+    <div class="fl"><label>Note</label><input id="rec-nt" placeholder="Optionnel…"/></div>
+  </div><div class="moa"><button class="btn bo" onclick="cov('ov-rec');document.getElementById('ov-rec')?.remove()">Annuler</button><button class="btn bg" onclick="savRec()">Enregistrer</button></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',modal);
+}
+let eRecId=null;
+function oEditRec(id){
+  const r=S.recurrentes.find(x=>x.id===id);if(!r)return;eRecId=id;oNewRec();
+  setTimeout(()=>{sv('rec-tp',r.type);sv('rec-ds',r.desc);sv('rec-am',r.amount);sv('rec-pl',r.plan||'conso');sv('rec-fr',r.freq||'mensuel');sv('rec-nt',r.note||'');document.getElementById('rec-pf').style.display=r.type==='revenu'?'none':'block';},50);
+}
+function savRec(){
+  const tp=g('rec-tp'),ds=g('rec-ds'),am=parseFloat(g('rec-am'))||0,pl=g('rec-pl'),fr=g('rec-fr'),nt=g('rec-nt');
+  if(!ds||!am){toast('Description et montant requis','er');return;}
+  if(!S.recurrentes)S.recurrentes=[];
+  if(eRecId){const r=S.recurrentes.find(x=>x.id===eRecId);if(r)Object.assign(r,{type:tp,desc:ds,amount:am,plan:pl,freq:fr,note:nt});eRecId=null;}
+  else S.recurrentes.push({id:uid(),type:tp,desc:ds,amount:am,plan:tp==='revenu'?null:pl,freq:fr,note:nt,actif:true});
+  cov('ov-rec');document.getElementById('ov-rec')?.remove();sch();rRecurrentes();toast('Récurrence enregistrée ✓','sg');
+}
+function cDelRec(id,ds){
+  document.getElementById('ctxt').textContent=`Supprimer la récurrence "${ds}" ?`;
+  document.getElementById('bconf').onclick=()=>{S.recurrentes=S.recurrentes.filter(r=>r.id!==id);cov('ov-conf');sch();rRecurrentes();};ov('ov-conf');
+}
+function applyRec(){
+  const recs=S.recurrentes||[];if(!recs.length){toast('Aucune récurrence configurée','er');return;}
+  const m=M();let count=0;
+  recs.forEach(r=>{
+    const already=(r.type==='revenu'?m.revenus:m.depenses).some(x=>x.recId===r.id);
+    if(!already){
+      if(r.type==='revenu')m.revenus.push({id:uid(),source:r.desc,amount:r.amount,date:td(),note:'Récurrence auto',recId:r.id});
+      else m.depenses.push({id:uid(),desc:r.desc,amount:r.amount,date:td(),plan:r.plan||'conso',note:'Récurrence auto',recId:r.id});
+      count++;
+    }
+  });
+  sch();rp(cp);toast(count>0?count+' transaction(s) ajoutée(s) ✓':'Déjà appliqué ce mois','sg');
+}
+
+// ============================================================
+// V3 - ANALYSE IA (Claude API)
+// ============================================================
+let iaLoading=false;
+function rIA(){
+  const el=document.getElementById('ia-content');
+  const rev=tRev(mi),tdp=PK.reduce((s,k)=>s+pDep(mi,k),0),sol=rev-tdp;
+  const epargne=pDep(mi,'epargne'),invest=pDep(mi,'invest');
+  const topDep=PK.map(k=>({k,d:pDep(mi,k)})).sort((a,b)=>b.d-a.d).slice(0,3);
+  const nbDettes=(M().dettes||[]).filter(d=>d.total-d.paye>0).length;
+  const nbBiz=S.businesses?.length||0;
+  el.innerHTML=`<div class="ia-box">
+    <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">🤖 Assistant IA Xiif XamXam</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Analyse personnalisée</div>
+    <div style="font-size:13px;color:#94A3B8;">Basée sur tes données réelles de ${MNS[mi].label}</div>
+  </div>
+  <div class="card mb4">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Ton résumé financier du mois</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <span class="fact-pill">💚 Revenus : ${f(rev)} FCFA</span>
+      <span class="fact-pill">🔴 Dépenses : ${f(tdp)} FCFA</span>
+      <span class="fact-pill" style="background:${sol>=0?'var(--gl)':'var(--rl)'};color:${sol>=0?'var(--g)':'var(--r)'};">⚖️ Solde : ${f(sol)} FCFA</span>
+      <span class="fact-pill">💳 Épargne : ${f(epargne)} FCFA</span>
+      <span class="fact-pill">📈 Investissement : ${f(invest)} FCFA</span>
+      ${nbDettes>0?`<span class="fact-pill" style="background:var(--rl);color:var(--r);">⚠️ ${nbDettes} dette(s) en cours</span>`:''}
+      ${nbBiz>0?`<span class="fact-pill">🏢 ${nbBiz} business</span>`:''}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+      <button class="btn bg bsm" onclick="askIA('analyse')">📊 Analyse globale</button>
+      <button class="btn bo bsm" onclick="askIA('conseils')">💡 Conseils pratiques</button>
+      <button class="btn bb bsm" onclick="askIA('epargne')">💳 Optimiser mon épargne</button>
+      <button class="btn bam bsm" onclick="askIA('dettes')">⚠️ Stratégie dettes</button>
+      ${nbBiz>0?`<button class="btn bcy bsm" onclick="askIA('business')">🏢 Analyse business</button>`:''}
+    </div>
+  </div>
+  <div id="ia-resp-zone"></div>`;
+}
+async function askIA(type){
+  if(iaLoading){toast('Analyse en cours…','er');return;}
+  iaLoading=true;
+  const zone=document.getElementById('ia-resp-zone');
+  if(!zone)return;
+  zone.innerHTML='<div class="ia-resp" style="color:var(--s4);">🤖 Analyse en cours… quelques secondes.</div>';
+
+  // Build rich context from user data
+  const rev=tRev(mi),tdp=PK.reduce((s,k)=>s+pDep(mi,k),0),sol=rev-tdp;
+  const dettesActives=(M().dettes||[]).filter(d=>d.total-d.paye>0);
+  const totalDettes=dettesActives.reduce((s,d)=>s+(d.total-d.paye),0);
+  const planDetails=PK.map(k=>{const b=bgt(mi,k),d=pDep(mi,k);return `${PC[k].lb}: budget ${f(b)} FCFA, dépensé ${f(d)} FCFA (${b>0?(d/b*100).toFixed(0):0}%)`;}).join('; ');
+  const bizSummary=S.businesses?.length?S.businesses.map(b=>{const bi=S.businesses.indexOf(b);return `${b.nom}: CA ${f(bCA(bi,bmi))} FCFA, bénéfice ${f(bBen(bi,bmi))} FCFA`;}).join('; '):'Aucun business';
+  const objectifsInfo=(S.objectifs||[]).map(o=>`${o.icone||'🎯'} ${o.nom}: cible ${f(o.cible)} FCFA`).join('; ')||'Aucun objectif';
+
+  const prompts={
+    analyse:`Tu es un coach financier islamique et expert en gestion de finances personnelles en Afrique de l'Ouest (FCFA). Analyse les finances de cet utilisateur pour ${MNS[mi].label} et donne une analyse claire et honnête.
+
+DONNÉES FINANCIÈRES:
+- Revenus du mois: ${f(rev)} FCFA
+- Dépenses totales: ${f(tdp)} FCFA  
+- Solde: ${f(sol)} FCFA
+- Plans: ${planDetails}
+- Dettes actives: ${dettesActives.length} dette(s), total dû: ${f(totalDettes)} FCFA
+- Business: ${bizSummary}
+- Objectifs épargne: ${objectifsInfo}
+
+Donne une analyse structurée avec: 1) Points positifs 2) Points d'attention 3) Un score santé financière /10 avec justification. Sois direct, pratique, et adapté au contexte sénégalais.`,
+
+    conseils:`Tu es un coach financier islamique et expert en gestion de finances personnelles en Afrique de l'Ouest (FCFA). Donne 5 conseils pratiques et actionnables pour améliorer les finances de cet utilisateur.
+
+DONNÉES: Revenus ${f(rev)} FCFA, Dépenses ${f(tdp)} FCFA, Solde ${f(sol)} FCFA. Plans: ${planDetails}. Dettes: ${f(totalDettes)} FCFA. Business: ${bizSummary}.
+
+Les conseils doivent être concrets, réalisables dès ce mois, et adaptés à la réalité économique sénégalaise. Intègre des principes islamiques de gestion (éviter le gaspillage, sadaqa, investissement halal) de façon naturelle.`,
+
+    epargne:`Tu es expert en épargne et investissement islamique en Afrique de l'Ouest. Analyse l'épargne et donne une stratégie personnalisée.
+
+DONNÉES: Épargne ce mois: ${f(pDep(mi,'epargne'))} FCFA (${gp2('epargne')*100}% des revenus). Investissement: ${f(pDep(mi,'invest'))} FCFA. Revenus: ${f(rev)} FCFA. Objectifs: ${objectifsInfo}.
+
+Recommande: comment optimiser l'épargne, quels objectifs prioriser, options d'investissement halal adaptées au Sénégal (BRVM, immobilier, agriculture, commerce).`,
+
+    dettes:`Tu es conseiller en gestion de dettes islamique. Analyse la situation des dettes et propose une stratégie de remboursement.
+
+DETTES ACTIVES: ${dettesActives.map(d=>`${d.nom}: reste ${f(d.total-d.paye)} FCFA${d.dlim?', échéance '+d.dlim:''}`).join('; ')||'Aucune dette active'}.
+BUDGET DETTES: ${f(bgt(mi,'dette'))} FCFA/mois. REVENUS: ${f(rev)} FCFA.
+
+Propose une stratégie claire: ordre de remboursement, montants mensuels recommandés, conseils pour éviter de nouveaux endettements. Rappelle l'importance islamique de rembourser ses dettes.`,
+
+    business:`Tu es consultant business spécialisé dans les PME africaines. Analyse les performances business.
+
+BUSINESS: ${S.businesses?.map(b=>{const bi=S.businesses.indexOf(b);return `${b.nom} (${b.type}): CA ${f(bCA(bi,bmi))} FCFA, coûts variables ${f(bCV(bi,bmi))} FCFA, charges fixes ${f(bCF(bi,bmi))} FCFA, bénéfice net ${f(bBen(bi,bmi))} FCFA, salaire dirigeant versé ${f(bVers(bi,bmi))} FCFA`;}).join('; ')||'Aucun business'}.
+
+Analyse: rentabilité, ratio charges/CA, recommandations pour améliorer les marges, conseils de développement business adaptés au marché sénégalais.`
+  };
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompts[type]||prompts.analyse}]
+      })
+    });
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'Erreur de réponse.';
+    zone.innerHTML=`<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--cy);">🤖 Analyse IA — ${type==='analyse'?'Analyse globale':type==='conseils'?'Conseils pratiques':type==='epargne'?'Stratégie épargne':type==='dettes'?'Stratégie dettes':'Analyse business'}</div><div class="ia-resp">${es(text)}</div></div>`;
+  }catch(err){
+    zone.innerHTML=`<div class="ib ib-r"><span>❌</span><span>Erreur de connexion à l'IA. Vérifie ta connexion internet.</span></div>`;
+  }
+  iaLoading=false;
+}
+
+// ============================================================
+// V3 - FACTURES & DEVIS (Business)
+// ============================================================
+function rBFactures(){
+  const el=document.getElementById('factures-list');
+  const bi=getBi();if(bi<0){el.innerHTML='<div class="est"><div class="eico">🧾</div><p>Sélectionnez un business.</p></div>';return;}
+  const b=S.businesses[bi];
+  if(!b.factures)b.factures=[];
+  const facts=b.factures;
+  if(!facts.length){
+    el.innerHTML=`<div class="ib ib-cy mb4"><span>ℹ️</span><span>Créez des factures et devis pour vos clients. Suivez les paiements et exportez en PDF.</span></div>
+    <div class="est"><div class="eico">🧾</div><p>Aucune facture.</p><button class="btn bcy mt3" onclick="oNewFacture()">+ Créer la première facture</button></div>`;return;
+  }
+  const totalAttente=facts.filter(f=>f.statut==='attente').reduce((s,f)=>s+f.total,0);
+  const totalPaye=facts.filter(f=>f.statut==='paye').reduce((s,f)=>s+f.total,0);
+  el.innerHTML=`<div class="kg mb4">
+    <div class="kpi" style="border-left:4px solid var(--am)"><div class="kl">En attente de paiement</div><div class="kv" style="color:var(--am)">${f(totalAttente)}</div><div class="ks">FCFA</div></div>
+    <div class="kpi" style="border-left:4px solid var(--g)"><div class="kl">Total encaissé</div><div class="kv" style="color:var(--g)">${f(totalPaye)}</div><div class="ks">FCFA</div></div>
+    <div class="kpi" style="border-left:4px solid var(--b)"><div class="kl">Nombre de factures</div><div class="kv" style="color:var(--b)">${facts.length}</div><div class="ks">total</div></div>
+  </div>
+  ${facts.slice().reverse().map(fac=>`<div class="inv-card">
+    <div class="inv-header">
+      <div><div class="inv-num">${es(fac.num||'FAC-'+fac.id.slice(0,6).toUpperCase())}</div><div class="inv-client">${es(fac.client)}</div><div class="txs tmu mt2">${fac.date||''} · ${es(fac.desc||'')}</div></div>
+      <div class="flex aic gi2"><span class="inv-status ${fac.statut||'attente'}">${fac.statut==='paye'?'✅ Payé':fac.statut==='envoye'?'📤 Envoyé':'⏳ En attente'}</span></div>
+    </div>
+    <div class="flex aic jb mt3">
+      <div style="font-size:18px;font-weight:800;color:var(--cy);">${f(fac.total)} FCFA</div>
+      <div class="flex gi2">
+        ${fac.statut!=='paye'?`<button class="btn bg bsm" onclick="marquerPaye('${fac.id}')">✅ Marquer payé</button>`:''}
+        <button class="pdf-btn" onclick="exportFacturePDF('${fac.id}')">📄 PDF</button>
+        <button class="bico dl" onclick="cDelFact('${fac.id}','${es(fac.client)}')">🗑️</button>
+      </div>
+    </div>
+  </div>`).join('')}`;
+}
+function oNewFacture(){
+  const bi=getBi();if(bi<0){toast('Sélectionnez un business','er');return;}
+  const b=S.businesses[bi];
+  if(!b.factures)b.factures=[];
+  const nextNum='FAC-'+String(b.factures.length+1).padStart(4,'0');
+  const modal=`<div class="ov on" id="ov-fact"><div class="mo" style="max-width:500px;"><h2>🧾 Nouvelle facture / Devis</h2><div class="mof">
+    <div class="fl"><label>N° Facture</label><input id="fact-num" value="${nextNum}"/></div>
+    <div class="fl"><label>Client</label><input id="fact-cl" placeholder="Nom du client…"/></div>
+    <div class="fl"><label>Description des services/produits</label><input id="fact-ds" placeholder="Ex: Impression 200 tee-shirts…"/></div>
+    <div class="fl"><label>Montant total (FCFA)</label><input id="fact-tt" type="number" placeholder="150000" min="0"/></div>
+    <div class="fl"><label>Date</label><input id="fact-dt" type="date" value="${td()}"/></div>
+    <div class="fl"><label>Date limite paiement</label><input id="fact-dlp" type="date"/></div>
+    <div class="fl"><label>Statut</label><select id="fact-st"><option value="attente">⏳ En attente</option><option value="envoye">📤 Envoyé au client</option><option value="paye">✅ Payé</option></select></div>
+    <div class="fl"><label>Note</label><input id="fact-nt" placeholder="Conditions de paiement…"/></div>
+  </div><div class="moa"><button class="btn bo" onclick="cov('ov-fact');document.getElementById('ov-fact')?.remove()">Annuler</button><button class="btn bcy" onclick="savFacture()">Enregistrer</button></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',modal);
+}
+function savFacture(){
+  const num=g('fact-num'),cl=g('fact-cl'),ds=g('fact-ds'),tt=parseFloat(g('fact-tt'))||0,dt=g('fact-dt'),dlp=g('fact-dlp'),st=g('fact-st'),nt=g('fact-nt');
+  if(!cl||!tt){toast('Client et montant requis','er');return;}
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];if(!b.factures)b.factures=[];
+  b.factures.push({id:uid(),num,client:cl,desc:ds,total:tt,date:dt,dateLimite:dlp,statut:st,note:nt});
+  cov('ov-fact');document.getElementById('ov-fact')?.remove();sch();rBFactures();toast('Facture enregistrée ✓','sg');
+}
+function marquerPaye(id){
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];
+  const fac=b.factures.find(f=>f.id===id);if(!fac)return;
+  fac.statut='paye';fac.datePaiement=td();sch();rBFactures();toast('Facture marquée payée ✓','sg');
+}
+function cDelFact(id,cl){
+  document.getElementById('ctxt').textContent=`Supprimer la facture de "${cl}" ?`;
+  document.getElementById('bconf').onclick=()=>{const bi=getBi();if(bi<0)return;S.businesses[bi].factures=S.businesses[bi].factures.filter(f=>f.id!==id);cov('ov-conf');sch();rBFactures();};ov('ov-conf');
+}
+function exportFacturePDF(id){
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];
+  const fac=b.factures.find(f=>f.id===id);if(!fac)return;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${es(fac.num||'')}</title>
+  <style>body{font-family:Arial,sans-serif;padding:40px;color:#1F2937;max-width:700px;margin:0 auto;}
+  .header{display:flex;justify-content:space-between;margin-bottom:30px;}
+  .brand{font-size:22px;font-weight:800;color:#0891B2;}.num{font-size:14px;color:#6B7280;}
+  .section{margin-bottom:20px;}.label{font-size:12px;font-weight:700;color:#9CA3AF;text-transform:uppercase;}
+  .value{font-size:16px;font-weight:600;margin-top:3px;}
+  .total-box{background:#F0F9FF;border:2px solid #0891B2;border-radius:8px;padding:16px;text-align:right;}
+  .total-label{font-size:13px;color:#0891B2;font-weight:700;}.total-val{font-size:24px;font-weight:800;color:#0891B2;}
+  .status{display:inline-block;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;background:${fac.statut==='paye'?'#DCFCE7':'#FEF3C7'};color:${fac.statut==='paye'?'#16A34A':'#D97706'};}
+  </style></head><body>
+  <div class="header"><div><div class="brand">${es(b.nom)}</div><div style="font-size:13px;color:#6B7280;margin-top:4px;">${es(b.desc||'')}</div></div>
+  <div style="text-align:right;"><div class="num">FACTURE ${es(fac.num||'')}</div><div style="font-size:13px;margin-top:4px;">${fac.date||''}</div><span class="status">${fac.statut==='paye'?'✅ Payé':fac.statut==='envoye'?'📤 Envoyé':'⏳ En attente'}</span></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+  <div class="section"><div class="label">Client</div><div class="value">${es(fac.client)}</div></div>
+  <div class="section"><div class="label">Date limite paiement</div><div class="value">${fac.dateLimite||'—'}</div></div></div>
+  <div class="section"><div class="label">Description</div><div class="value">${es(fac.desc||'')}</div></div>
+  ${fac.note?`<div class="section"><div class="label">Note / Conditions</div><div class="value">${es(fac.note)}</div></div>`:''}
+  <div class="total-box"><div class="total-label">MONTANT TOTAL</div><div class="total-val">${f(fac.total)} FCFA</div></div>
+  <p style="font-size:11px;color:#9CA3AF;margin-top:30px;text-align:center;">Généré par Xiif XamXam Business Manager</p>
+  </body></html>`;
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='Facture_'+es(fac.num||fac.id)+'_'+es(fac.client)+'.html';
+  a.click();URL.revokeObjectURL(url);
+  toast('Facture exportée (ouvrir et imprimer en PDF) ✓','sg');
+}
+
+// ============================================================
+// V3 - SIDEBAR ALERT BADGES
+// ============================================================
+function updSBAlerts(){
+  // Show red dot on charts nav if any plan >90%
+  const hasAlert=PK.some(k=>{const b=bgt(mi,k),d=pDep(mi,k);return b>0&&d/b>=0.9;});
+  const alertDot=hasAlert?'<span style="width:7px;height:7px;background:var(--r);border-radius:50%;display:inline-block;margin-left:4px;"></span>':'';
+  const dashNav=document.querySelector('.sni[data-p="db"] .lbl');
+  if(dashNav)dashNav.innerHTML='Tableau de bord'+alertDot;
+}
+
 </script>
 </body>
 </html>
