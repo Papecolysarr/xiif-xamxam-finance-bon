@@ -3,299 +3,1521 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Xiif XamXam - Pro</title>
+<title>Xiif XamXam Finances + Business</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+<script>window._fbReady=new Promise(r=>{window._fbResolve=r;});</script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",
-    authDomain: "xiif-xamxam.firebaseapp.com",
-    projectId: "xiif-xamxam",
-    storageBucket: "xiif-xamxam.firebasestorage.app",
-    messagingSenderId: "518564223931",
-    appId: "1:518564223931:web:0881991192a0cc0003429e"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let currentUser = null;
-let userData = { 
-    transactions: [], 
-    config: { plans: { don: 10, epargne: 10, invest: 5, dette: 10, conso: 65 } } 
-};
-
-const SUB_CATS = {
-    don: ["Famille", "Zakat", "Aumône", "Cadeaux", "Autres"],
-    epargne: ["Fonds d'urgence", "Projet", "Vacances", "Autres"],
-    invest: ["Business", "Bourse", "Crypto", "Immobilier", "Autres"],
-    dette: ["Banque", "Ami", "Boutique", "Autres"],
-    conso: ["Loyer", "Nourriture", "Transport", "Factures", "Santé", "Loisirs", "Autres"]
-};
-
-onAuthStateChanged(auth, user => {
-    if (user) {
-        currentUser = user;
-        document.getElementById('ld').style.display = 'none';
-        document.getElementById('au').style.display = 'none';
-        document.getElementById('ap').style.display = 'flex';
-        onSnapshot(doc(db, "users", user.uid), d => { 
-            if(d.exists()){ 
-                userData = d.data(); 
-                renderAll(); 
-                fillSettings();
-            } 
-        });
-    } else {
-        document.getElementById('ld').style.display = 'none';
-        document.getElementById('au').style.display = 'flex';
-    }
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,doc,setDoc,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyAPw7tRUftioT_Jap0iupmeSH-jsJdBp5w",authDomain:"xiif-xamxam.firebaseapp.com",projectId:"xiif-xamxam",storageBucket:"xiif-xamxam.firebasestorage.app",messagingSenderId:"518564223931",appId:"1:518564223931:web:0881991192a0cc0003429e"};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);const db=getFirestore(app);
+window._fb={auth,db,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,doc,setDoc,getDoc};
+window._fbResolve();
+onAuthStateChanged(auth,user=>{
+  if(user){window._currentUser=user;if(window._onUserReady)window._onUserReady(user);}
+  else{window._currentUser=null;showScreen('auth');}
 });
-
-// --- SAUVEGARDE ET REPARTITION ---
-window.savTx = async () => {
-    const type = document.getElementById('txtp').value;
-    const amt = parseFloat(document.getElementById('txam').value);
-    const desc = document.getElementById('txds').value;
-    const date = document.getElementById('txdt').value;
-    if(!amt || !desc) return alert("Champs vides");
-
-    if(type === 'revenu') {
-        const p = userData.config.plans;
-        const dist = [
-            { p: 'don', v: (amt * p.don / 100) },
-            { p: 'epargne', v: (amt * p.epargne / 100) },
-            { p: 'invest', v: (amt * p.invest / 100) },
-            { p: 'dette', v: (amt * p.dette / 100) },
-            { p: 'conso', v: (amt * p.conso / 100) }
-        ];
-        dist.forEach(d => {
-            userData.transactions.push({ id:Date.now()+Math.random(), desc: `Rép: ${desc}`, amt: d.v, type: 'revenu', plan: d.p, sub: 'Auto', date });
-        });
-    } else {
-        userData.transactions.push({ 
-            id:Date.now(), desc, amt, type: 'depense', 
-            plan: document.getElementById('txpl').value, 
-            sub: document.getElementById('txsc').value || "Autres", date 
-        });
-    }
-    await setDoc(doc(db, "users", currentUser.uid), userData);
-    window.cov('ov-tx');
-};
-
-// --- PARAMETRES ---
-function fillSettings() {
-    const p = userData.config.plans;
-    document.getElementById('cfg-conso').value = p.conso;
-    document.getElementById('cfg-epargne').value = p.epargne;
-    document.getElementById('cfg-invest').value = p.invest;
-    document.getElementById('cfg-don').value = p.don;
-    document.getElementById('cfg-dette').value = p.dette;
-}
-
-window.saveSettings = async () => {
-    const c = parseFloat(document.getElementById('cfg-conso').value);
-    const e = parseFloat(document.getElementById('cfg-epargne').value);
-    const i = parseFloat(document.getElementById('cfg-invest').value);
-    const dn = parseFloat(document.getElementById('cfg-don').value);
-    const dt = parseFloat(document.getElementById('cfg-dette').value);
-
-    if((c+e+i+dn+dt) !== 100) return alert("Le total doit faire exactement 100% ! Actuellement : " + (c+e+i+dn+dt) + "%");
-
-    userData.config.plans = { conso:c, epargne:e, invest:i, don:dn, dette:dt };
-    await setDoc(doc(db, "users", currentUser.uid), userData);
-    alert("Paramètres enregistrés !");
-    window.gp('db');
-};
-
-// --- EXPORT EXCEL ---
-window.exportExcel = (months) => {
-    const now = new Date();
-    const limitDate = new Date();
-    limitDate.setMonth(now.getMonth() - months);
-
-    const filtered = userData.transactions.filter(t => new Date(t.date) >= limitDate);
-    
-    const data = filtered.map(t => ({
-        Date: t.date,
-        Description: t.desc,
-        Type: t.type === 'revenu' ? 'REVENU' : 'DEPENSE',
-        Plan: t.plan.toUpperCase(),
-        SousCategorie: t.sub,
-        Montant_FCFA: t.amt
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Rapport_Xiif");
-    XLSX.writeFile(wb, `Rapport_${months}mois_XiifXamXam.xlsx`);
-};
-
-window.renderAll = () => {
-    const txs = userData.transactions || [];
-    const plans = ['conso', 'epargne', 'invest', 'don', 'dette'];
-    const icons = { don:'🤲', epargne:'💳', invest:'📈', dette:'⚠️', conso:'🛒' };
-    
-    let htmlPlans = "";
-    plans.forEach(p => {
-        const inAmt = txs.filter(t => t.plan === p && t.type === 'revenu').reduce((a,b)=>a+b.amt,0);
-        const outAmt = txs.filter(t => t.plan === p && t.type === 'depense').reduce((a,b)=>a+b.amt,0);
-        const solde = inAmt - outAmt;
-        htmlPlans += `<div class="card"><div class="kl">${icons[p]} Plan ${p}</div><div class="kv ${solde < 0 ? 'tr':'tg'}">${solde.toLocaleString()} F</div></div>`;
-    });
-    document.getElementById('plan-grid').innerHTML = htmlPlans;
-
-    document.getElementById('dbrec').innerHTML = txs.slice(-5).reverse().map(t => `
-        <div class="txi">
-            <div class="txinf"><div class="fb tsm">${t.desc}</div><div class="txmeta">${t.plan} > ${t.sub}</div></div>
-            <div class="${t.type==='revenu'?'tg':'tr'} fb">${t.amt.toLocaleString()}</div>
-        </div>
-    `).join('');
-};
-
-window.gp = (p) => {
-    document.querySelectorAll('.pg').forEach(pg => pg.classList.remove('on'));
-    document.getElementById('pg-'+p).classList.add('on');
-};
-window.oaTx = (type) => { 
-    document.getElementById('txtp').value = type; 
-    document.getElementById('txdt').valueAsDate = new Date();
-    const isRev = type === 'revenu';
-    document.getElementById('txpf').style.display = isRev ? 'none' : 'block';
-    window.upSubOpts();
-    document.getElementById('ov-tx').classList.add('on'); 
-};
-window.upSubOpts = () => {
-    const plan = document.getElementById('txpl').value;
-    const sc = document.getElementById('txsc'); sc.innerHTML = "";
-    (SUB_CATS[plan] || []).forEach(c => {
-        let o = document.createElement('option'); o.value = c; o.innerText = c;
-        if(c === "Autres") o.selected = true;
-        sc.appendChild(o);
-    });
-};
-window.cov = (id) => document.getElementById(id).classList.remove('on');
 </script>
-
 <style>
-:root{ --g:#16A34A; --r:#DC2626; --b:#2563EB; --am:#D97706; --s0:#F9FAFB; --s2:#E5E7EB; --s5:#6B7280; --s8:#1F2937; --w:#FFF; --font:'Plus Jakarta Sans',sans-serif; }
-body{ font-family:var(--font); background:var(--s0); color:var(--s8); margin:0; }
-.tnav{ background:var(--w); padding:15px 20px; border-bottom:1px solid var(--s2); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:50;}
-.cnt{ padding:20px; max-width:1100px; margin:0 auto; }
-.card{ background:var(--w); padding:15px; border-radius:12px; border:1px solid var(--s2); box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:10px; }
-.grid4{ display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:25px; }
-.grid-plans{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:25px; }
-.kl{ font-size:11px; font-weight:800; color:var(--s5); text-transform:uppercase; margin-bottom:5px; }
-.kv{ font-size:18px; font-weight:800; }
-.fb{ font-weight:700; } .tsm{ font-size:13px; } .tmu{ color:var(--s5); } .tg{ color:var(--g); } .tr{ color:var(--r); }
-.ov{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; align-items:center; justify-content:center; }
-.ov.on{ display:flex; }
-.mo{ background:var(--w); padding:25px; border-radius:16px; width:90%; max-width:400px; }
-.fl{ margin-bottom:12px; } .fl label{ display:block; font-size:10px; font-weight:800; margin-bottom:4px; }
-.fl input, .fl select{ width:100%; padding:10px; border:1px solid var(--s2); border-radius:8px; }
-.btn{ padding:12px; border-radius:8px; border:none; font-weight:700; cursor:pointer; width:100%; margin-top:5px;}
-.bg{ background:var(--g); color:var(--w); } .bo{ background:var(--s2); color:var(--s8); } .bb{ background:var(--b); color:var(--w); }
-.txi{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--s0); }
-.pg{ display:none; } .pg.on{ display:block; }
-.ex-row{ display:flex; gap:10px; margin-top:10px; }
+:root{
+  --g:#16A34A;--gl:#DCFCE7;--gm:#BBF7D0;
+  --r:#DC2626;--rl:#FEE2E2;--rm:#FECACA;
+  --b:#2563EB;--bl:#DBEAFE;--bm:#BFDBFE;
+  --am:#D97706;--al:#FEF3C7;
+  --pu:#7C3AED;--pl:#EDE9FE;
+  --cy:#0891B2;--cyl:#CFFAFE;--cym:#A5F3FC;
+  --pk:#DB2777;--pkl:#FCE7F3;--pkm:#FBCFE8;
+  --s0:#F9FAFB;--s1:#F3F4F6;--s2:#E5E7EB;--s3:#D1D5DB;
+  --s4:#9CA3AF;--s5:#6B7280;--s6:#4B5563;--s7:#374151;--s8:#1F2937;--s9:#111827;
+  --w:#FFF;--sh:0 1px 3px rgba(0,0,0,.08);--shm:0 4px 16px rgba(0,0,0,.12);
+  --r6:6px;--r8:8px;--r12:12px;--r16:16px;--r20:20px;
+  --font:'Plus Jakarta Sans',system-ui,sans-serif;
+  --biz:#0F172A;--biz2:#1E293B;--biz3:#334155;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--s0);color:var(--s8);min-height:100vh;-webkit-font-smoothing:antialiased;}
+input,select,button,textarea{font-family:var(--font);}
+button{cursor:pointer;}
+#ld{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:14px;background:var(--w);}
+.spin{width:30px;height:30px;border:3px solid var(--s2);border-top-color:var(--g);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+#au{display:none;min-height:100vh;background:var(--w);align-items:center;justify-content:center;padding:20px;}
+.ac{width:100%;max-width:380px;}
+.abrand{font-size:26px;font-weight:800;color:var(--s9);letter-spacing:-1px;margin-bottom:4px;}
+.abrand span{color:var(--g);}
+.asub{font-size:14px;color:var(--s5);margin-bottom:28px;}
+.atabs{display:flex;border-bottom:2px solid var(--s2);margin-bottom:24px;}
+.atab{flex:1;padding:11px;text-align:center;font-size:14px;font-weight:600;color:var(--s5);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:.15s;}
+.atab.on{color:var(--g);border-bottom-color:var(--g);}
+.aform{display:flex;flex-direction:column;gap:14px;}
+.fl label{font-size:12px;font-weight:700;color:var(--s7);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;}
+.fl input,.fl select{width:100%;border:1.5px solid var(--s2);border-radius:var(--r8);padding:11px 13px;font-size:15px;outline:none;transition:.15s;background:var(--w);color:var(--s8);}
+.fl input:focus,.fl select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.08);}
+.aerr{background:var(--rl);border:1px solid var(--rm);color:var(--r);padding:10px 13px;border-radius:var(--r8);font-size:13px;font-weight:500;display:none;}
+.aerr.on{display:block;}
+.bpri{width:100%;background:var(--g);color:var(--w);border:none;border-radius:var(--r8);padding:13px;font-size:15px;font-weight:700;transition:.15s;}
+.bpri:hover{background:#15803D;}.bpri:disabled{opacity:.55;cursor:not-allowed;}
+#ap{display:none;flex-direction:column;min-height:100vh;}
+#ap.on{display:flex;}
+.mode-bar{display:flex;background:var(--w);border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:101;}
+.mode-tab{flex:1;padding:14px;font-size:13px;font-weight:700;text-align:center;cursor:pointer;border-bottom:3px solid transparent;transition:.15s;color:var(--s5);display:flex;align-items:center;justify-content:center;gap:6px;}
+.mode-tab.on.perso{color:var(--g);border-bottom-color:var(--g);background:var(--gl);}
+.mode-tab.on.biz{color:var(--cy);border-bottom-color:var(--cy);background:var(--cyl);}
+.mode-tab:hover{background:var(--s1);}
+.tnav{background:var(--w);border-bottom:1px solid var(--s2);display:flex;align-items:center;padding:0 16px;position:sticky;top:53px;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.tnav.bm{background:var(--biz);border-color:var(--biz3);}
+.tbrand{font-size:15px;font-weight:800;color:var(--s9);letter-spacing:-.3px;margin-right:16px;padding:16px 0;white-space:nowrap;flex-shrink:0;}
+.tnav.bm .tbrand{color:var(--w);}
+.ttabs{display:flex;overflow-x:auto;flex:1;}.ttabs::-webkit-scrollbar{display:none;}
+.ntab{padding:17px 13px;font-size:13px;font-weight:600;color:var(--s5);cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;transition:.15s;flex-shrink:0;}
+.ntab:hover{color:var(--s8);}.ntab.on{color:var(--g);border-bottom-color:var(--g);}
+.tnav.bm .ntab{color:#94A3B8;}.tnav.bm .ntab:hover{color:var(--w);}
+.tnav.bm .ntab.on{color:var(--cy);border-bottom-color:var(--cy);}
+.tnav-r{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:10px;flex-shrink:0;}
+.ubtn{display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:var(--r8);border:1.5px solid var(--s2);background:var(--w);font-size:13px;font-weight:600;color:var(--s7);transition:.15s;}
+.ubtn:hover{background:var(--s1);}
+.tnav.bm .ubtn{background:var(--biz2);border-color:var(--biz3);color:#CBD5E1;}
+.av{width:27px;height:27px;border-radius:50%;background:var(--g);color:var(--w);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.abody{display:flex;flex:1;overflow:hidden;}
+.sb{width:220px;background:var(--w);border-right:1px solid var(--s2);flex-shrink:0;display:flex;flex-direction:column;height:calc(100vh - 107px);position:sticky;top:107px;overflow-y:auto;}
+.bsb{background:var(--biz);border-color:var(--biz3);}
+.sb::-webkit-scrollbar{width:3px;}.sb::-webkit-scrollbar-thumb{background:var(--s2);border-radius:99px;}
+.bsb::-webkit-scrollbar-thumb{background:var(--biz3);}
+.sb-qadd{padding:12px 10px 8px;}
+.sb-ql{font-size:10px;font-weight:700;color:var(--s4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
+.bsb .sb-ql{color:#64748B;}
+.sb-btns{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.qb{border:none;border-radius:var(--r6);padding:8px 5px;font-size:11px;font-weight:700;transition:.12s;display:flex;align-items:center;justify-content:center;gap:3px;}
+.qb.qg{background:var(--gl);color:var(--g);}.qb.qg:hover{background:var(--gm);}
+.qb.qr{background:var(--rl);color:var(--r);}.qb.qr:hover{background:var(--rm);}
+.qb.qa{background:var(--al);color:var(--am);grid-column:span 2;}.qb.qa:hover{background:#FDE68A;}
+.qb.qep{background:var(--bl);color:var(--b);grid-column:span 2;}.qb.qep:hover{background:var(--bm);}
+.qb.qcy{background:var(--cyl);color:var(--cy);grid-column:span 2;}.qb.qcy:hover{background:var(--cym);}
+.qb.qpk{background:var(--pkl);color:var(--pk);}.qb.qpk:hover{background:var(--pkm);}
+.sdiv{height:1px;background:var(--s2);margin:6px 10px;}
+.bsb .sdiv{background:var(--biz3);}
+.sb-nav{flex:1;padding:6px 8px;}
+.sni{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--r8);cursor:pointer;font-size:13px;font-weight:600;color:var(--s6);transition:.12s;margin-bottom:1px;}
+.sni:hover{background:var(--s1);color:var(--s8);}.sni.on{background:var(--gl);color:var(--g);}
+.bsb .sni{color:#94A3B8;}.bsb .sni:hover{background:var(--biz2);color:var(--w);}
+.bsb .sni.on{background:rgba(8,145,178,.18);color:var(--cy);}
+.sni .ico{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+.sni .lbl{flex:1;}
+.badge{font-size:10px;font-weight:700;background:var(--gl);color:var(--g);padding:2px 6px;border-radius:99px;}
+.bsb .badge{background:rgba(8,145,178,.2);color:var(--cy);}
+.ssec{padding:4px 11px 2px;font-size:10px;font-weight:700;color:var(--s4);text-transform:uppercase;letter-spacing:.5px;}
+.bsb .ssec{color:#475569;}
+.sb-bot{padding:10px 10px 12px;border-top:1px solid var(--s2);}
+.bsb .sb-bot{border-color:var(--biz3);}
+.sb-bot label{font-size:10px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px;display:flex;align-items:center;gap:4px;}
+.bsb .sb-bot label{color:#64748B;}
+.sb-bot select{width:100%;border:1.5px solid var(--s2);border-radius:var(--r8);padding:8px 10px;font-size:13px;font-weight:600;color:var(--s7);outline:none;background:var(--w);}
+.bsb .sb-bot select{background:var(--biz2);border-color:var(--biz3);color:#CBD5E1;}
+.sdo{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--g);}
+.sdo.sy{background:var(--am);animation:pu .8s ease-in-out infinite;}
+@keyframes pu{0%,100%{opacity:1;}50%{opacity:.3;}}
+.cnt{flex:1;overflow-y:auto;padding:22px;}
+.pg{display:none;animation:fi .18s ease;}
+.pg.on{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(3px);}to{opacity:1;}}
+.card{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:18px;box-shadow:var(--sh);}
+.kg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:11px;margin-bottom:18px;}
+.kpi{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:14px 16px;box-shadow:var(--sh);}
+.kl{font-size:11px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.kv{font-size:20px;font-weight:800;letter-spacing:-.4px;}
+.ks{font-size:11px;color:var(--s4);margin-top:2px;}
+.prow{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:18px;}
+.pchip{border-radius:var(--r12);padding:13px 15px;cursor:pointer;transition:.15s;border:1.5px solid transparent;}
+.pchip:hover{transform:translateY(-1px);box-shadow:var(--shm);}
+.pcn{font-size:11px;font-weight:700;margin-bottom:3px;}
+.pcb{font-size:17px;font-weight:800;letter-spacing:-.4px;}
+.pcs{font-size:11px;margin-top:3px;opacity:.7;}
+.pr{height:5px;border-radius:99px;overflow:hidden;}
+.prt{height:100%;border-radius:99px;transition:.3s;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r8);font-size:13px;font-weight:600;border:none;transition:.15s;}
+.bg{background:var(--g);color:var(--w);}.bg:hover{background:#15803D;}.bg:disabled{opacity:.5;cursor:not-allowed;}
+.bo{background:var(--w);border:1.5px solid var(--s2);color:var(--s7);}.bo:hover{border-color:var(--s4);}
+.br2{background:var(--rl);color:var(--r);border:1.5px solid var(--rm);}.br2:hover{background:var(--rm);}
+.bb{background:var(--bl);color:var(--b);border:1.5px solid var(--bm);}.bb:hover{background:var(--bm);}
+.bcy{background:var(--cyl);color:var(--cy);border:1.5px solid var(--cym);}.bcy:hover{background:var(--cym);}
+.bam{background:var(--al);color:var(--am);border:1.5px solid #FDE68A;}
+.bpk{background:var(--pkl);color:var(--pk);border:1.5px solid var(--pkm);}.bpk:hover{background:var(--pkm);}
+.bsm{padding:6px 11px;font-size:12px;}
+.bico{background:none;border:none;padding:5px;border-radius:var(--r6);display:inline-flex;align-items:center;transition:.15s;}
+.bico:hover{background:var(--s1);}.bico.ed:hover{color:var(--b);}.bico.dl:hover{color:var(--r);}
+.fs label{font-size:12px;font-weight:700;color:var(--s6);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.3px;}
+.fs input,.fs select{width:100%;border:1.5px solid var(--s2);border-radius:var(--r8);padding:9px 11px;font-size:13px;color:var(--s8);outline:none;transition:.15s;background:var(--w);}
+.fs input:focus,.fs select:focus{border-color:var(--g);}
+.txl{display:flex;flex-direction:column;gap:5px;}
+.txi{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:11px 14px;display:flex;align-items:center;gap:10px;transition:.12s;}
+.txi:hover{border-color:var(--s3);box-shadow:var(--sh);}
+.txd{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.txd.rv{background:var(--g);}.txd.dp{background:var(--r);}.txd.ep{background:var(--b);}
+.txinf{flex:1;min-width:0;}
+.txdsc{font-size:14px;font-weight:600;color:var(--s8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.txmt{font-size:12px;color:var(--s5);margin-top:1px;}
+.txam{font-size:15px;font-weight:800;letter-spacing:-.3px;flex-shrink:0;}
+.txam.p{color:var(--g);}.txam.n{color:var(--r);}.txam.b{color:var(--b);}
+.txac{display:flex;gap:3px;opacity:0;transition:.15s;}
+.txi:hover .txac{opacity:1;}
+.est{text-align:center;padding:44px 20px;color:var(--s4);}
+.eico{font-size:34px;margin-bottom:8px;}
+.tbar{display:flex;border-bottom:2px solid var(--s2);margin-bottom:18px;}
+.tbtn{padding:10px 15px;font-size:13px;font-weight:600;color:var(--s5);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;}
+.tbtn.on{color:var(--g);border-bottom-color:var(--g);}
+.tbtn.cy.on{color:var(--cy);border-bottom-color:var(--cy);}
+.dt{width:100%;border-collapse:collapse;}
+.dt th{text-align:left;padding:9px 11px;font-size:11px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--s2);}
+.dt td{padding:10px 11px;font-size:13px;border-bottom:1px solid var(--s1);color:var(--s7);}
+.dt tr:hover td{background:var(--s0);}
+.dt tfoot td{padding:10px 11px;font-weight:700;border-top:2px solid var(--s2);background:var(--s0);}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);}
+.ov.on{display:flex;}
+.mo{background:var(--w);border-radius:var(--r20);padding:24px;width:100%;max-width:460px;box-shadow:var(--shm);max-height:88vh;overflow-y:auto;}
+.mo h2{font-size:18px;font-weight:800;color:var(--s9);margin-bottom:18px;}
+.mof{display:flex;flex-direction:column;gap:13px;}
+.moa{display:flex;gap:9px;justify-content:flex-end;margin-top:20px;}
+.cmo{background:var(--w);border-radius:var(--r20);padding:26px;width:100%;max-width:340px;box-shadow:var(--shm);text-align:center;}
+.cmo .ci{font-size:38px;margin-bottom:10px;}
+.cmo .ct{font-size:16px;font-weight:800;color:var(--s9);margin-bottom:5px;}
+.cmo .cd{font-size:13px;color:var(--s5);margin-bottom:22px;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--s9);color:var(--w);padding:11px 18px;border-radius:var(--r12);font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:.25s;pointer-events:none;display:flex;align-items:center;gap:9px;white-space:nowrap;box-shadow:var(--shm);}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.sg{background:var(--g);}.toast.er{background:var(--r);}
+.undo{background:rgba(255,255,255,.2);border:none;color:var(--w);padding:3px 9px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;margin-left:3px;}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.dc{background:var(--w);border:1.5px solid var(--rm);border-radius:var(--r12);padding:15px;}
+.dc.ok{border-color:var(--gm);background:var(--gl);}
+.dcn{font-size:14px;font-weight:800;color:var(--r);margin-bottom:8px;}
+.dc.ok .dcn{color:var(--g);}
+.dr{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+.dl2{color:var(--s5);}.dv2{font-weight:600;}
+.efchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+.ec{padding:6px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--s2);background:var(--w);color:var(--s6);transition:.15s;}
+.ec.on{background:var(--g);color:var(--w);border-color:var(--g);}
+.pp{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:14px;margin-bottom:10px;}
+.pph{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ppn{font-size:13px;font-weight:700;}
+.ppi{border:1.5px solid var(--s2);border-radius:var(--r8);padding:6px 9px;font-size:15px;font-weight:800;width:68px;text-align:center;outline:none;}
+input[type=range]{width:100%;accent-color:var(--g);}
+.bge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;}
+.bgg{background:var(--gl);color:var(--g);}.bgr{background:var(--rl);color:var(--r);}
+.bgb{background:var(--bl);color:var(--b);}.bga{background:var(--al);color:var(--am);}
+.bgp{background:var(--pl);color:var(--pu);}.bgs{background:var(--s1);color:var(--s6);}
+.bgcy{background:var(--cyl);color:var(--cy);}.bgpk{background:var(--pkl);color:var(--pk);}
+.flex{display:flex;}.gi2{gap:8px;}.gi3{gap:12px;}.aic{align-items:center;}.jb{justify-content:space-between;}.f1{flex:1;}.fw{flex-wrap:wrap;}
+.mt2{margin-top:8px;}.mt3{margin-top:12px;}.mt4{margin-top:16px;}.mb3{margin-bottom:12px;}.mb4{margin-bottom:16px;}
+.tsm{font-size:13px;}.txs{font-size:12px;}.tmu{color:var(--s5);}
+.fb{font-weight:700;}.tg{color:var(--g);}.tr{color:var(--r);}.tb{color:var(--b);}
+.scx{overflow-x:auto;}
+.ib{border-radius:var(--r8);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:13px;}
+.ib-g{background:var(--gl);border:1px solid var(--gm);color:var(--g);}
+.ib-b{background:var(--bl);border:1px solid var(--bm);color:var(--b);}
+.ib-r{background:var(--rl);border:1px solid var(--rm);color:var(--r);}
+.ib-a{background:var(--al);border:1px solid #FDE68A;color:var(--am);}
+.ib-cy{background:var(--cyl);border:1px solid var(--cym);color:var(--cy);}
+.hamb{display:none;background:none;border:none;font-size:20px;padding:6px;border-radius:var(--r6);color:var(--s7);margin-right:6px;}
+/* BIZ */
+.biz-hdr{background:linear-gradient(135deg,var(--biz),var(--biz2));border-radius:var(--r16);padding:20px 22px;margin-bottom:18px;color:var(--w);position:relative;overflow:hidden;}
+.biz-hdr::after{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(8,145,178,.15);pointer-events:none;}
+.biz-sel-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.biz-card{background:var(--w);border:2px solid var(--s2);border-radius:var(--r12);padding:13px 16px;cursor:pointer;transition:.15s;min-width:150px;}
+.biz-card:hover{border-color:var(--cy);box-shadow:var(--sh);}
+.biz-card.on{border-color:var(--cy);background:var(--cyl);}
+.biz-card-nm{font-size:13px;font-weight:800;color:var(--s8);}
+.biz-card.on .biz-card-nm{color:var(--cy);}
+.biz-card-tp{font-size:11px;color:var(--s5);margin-top:2px;}
+.biz-card-add{border:2px dashed var(--s3);background:var(--s0);display:flex;align-items:center;justify-content:center;gap:6px;color:var(--s5);font-size:13px;font-weight:700;}
+.biz-card-add:hover{border-color:var(--cy);color:var(--cy);background:var(--cyl);}
+.cmd-card{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:14px;margin-bottom:10px;transition:.15s;}
+.cmd-card:hover{box-shadow:var(--shm);border-color:var(--s3);}
+.cmd-cl{font-size:14px;font-weight:800;color:var(--s8);}
+.cmd-ds{font-size:12px;color:var(--s5);margin-top:2px;}
+.cmd-st{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;}
+.cmd-st.en-cours{background:var(--al);color:var(--am);}
+.cmd-st.termine{background:var(--gl);color:var(--g);}
+.cmd-st.annule{background:var(--s1);color:var(--s5);}
+.cmd-fin{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.cfi{background:var(--s0);border-radius:var(--r8);padding:8px 10px;text-align:center;}
+.cfl{font-size:10px;font-weight:700;color:var(--s5);text-transform:uppercase;letter-spacing:.3px;}
+.cfv{font-size:14px;font-weight:800;margin-top:2px;}
+.chg-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px;}
+.chg-i{background:var(--w);border:1.5px solid var(--s2);border-radius:var(--r12);padding:13px;}
+.sal-bn{background:linear-gradient(135deg,#0F172A,#1E3A5F);border-radius:var(--r16);padding:22px;margin-bottom:18px;color:var(--w);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+.sal-bn .sl{font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.sal-bn .sa{font-size:28px;font-weight:800;letter-spacing:-.5px;}
+.sal-bn .ss{font-size:12px;color:#64748B;margin-top:4px;}
+.sal-bt{background:var(--cy);color:var(--w);border:none;border-radius:var(--r12);padding:13px 22px;font-size:14px;font-weight:800;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px;}
+.sal-bt:hover{background:#0E7490;}
+.fou-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+.fou-c{background:var(--w);border:1.5px solid var(--s2);border-radius:var(--r12);padding:13px;}
+.vi{background:var(--w);border:1px solid var(--s2);border-radius:var(--r12);padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.vico{width:36px;height:36px;border-radius:50%;background:var(--cyl);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+@media(max-width:768px){
+  .sb{display:none;position:fixed;top:0;left:0;height:100vh;z-index:200;box-shadow:var(--shm);}
+  .sb.mob{display:flex;}.ttabs{display:flex;}.hamb{display:block;}.cnt{padding:14px;}
+  .kg{grid-template-columns:1fr 1fr;}.prow{grid-template-columns:1fr 1fr;}
+  .cmd-fin{grid-template-columns:1fr 1fr;}
+  .sal-bn{flex-direction:column;}.sal-bt{width:100%;justify-content:center;}
+}
+@media(min-width:769px){.ttabs{display:none;}}
 </style>
 </head>
 <body>
-
-<div id="ld" style="text-align:center; padding:100px;">Chargement...</div>
-
-<div id="au" style="display:none; align-items:center; justify-content:center; height:100vh;">
-    <div class="mo card" style="text-align:center">
-        <h2>Xiif XamXam</h2>
-        <input id="le" type="email" placeholder="Email" class="fl" style="width:90%">
-        <input id="lp" type="password" placeholder="Pass" class="fl" style="width:90%">
-        <button class="btn bg" onclick="signInWithEmailAndPassword(auth, document.getElementById('le').value, document.getElementById('lp').value)">Connexion</button>
+<div id="ld"><div class="spin"></div><p style="font-size:13px;color:var(--s4);">Chargement…</p></div>
+<!-- AUTH -->
+<div id="au">
+  <div class="ac">
+    <div class="abrand">Xiif <span>XamXam</span></div>
+    <div class="asub">Finances Personnelles &amp; Business</div>
+    <div class="atabs">
+      <div class="atab on" id="tl" onclick="stab('l')">Se connecter</div>
+      <div class="atab" id="tr2" onclick="stab('r')">Créer un compte</div>
     </div>
+    <div class="aerr" id="aerr"></div>
+    <div id="fl" class="aform">
+      <div class="fl"><label>Email</label><input id="le" type="email" placeholder="ton@email.com"/></div>
+      <div class="fl"><label>Mot de passe</label><input id="lp" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button class="bpri" onclick="doLogin()">Se connecter</button>
+    </div>
+    <div id="fr" class="aform" style="display:none;">
+      <div class="fl"><label>Prénom &amp; Nom</label><input id="rn" placeholder="Pape Coly SARR"/></div>
+      <div class="fl"><label>Email</label><input id="re" type="email" placeholder="ton@email.com"/></div>
+      <div class="fl"><label>Mot de passe (min. 6 car.)</label><input id="rp2" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+      <button class="bpri" onclick="doRegister()">Créer mon compte</button>
+    </div>
+  </div>
 </div>
 
-<div id="ap" style="display:none; flex-direction:column;">
-    <nav class="tnav">
-        <b onclick="gp('db')" style="cursor:pointer">Xiif XamXam 💰</b>
-        <button onclick="gp('cfg')" class="btn bo" style="width:auto; padding:5px 15px">⚙️ Paramètres</button>
-    </nav>
-
+<!-- APP -->
+<div id="ap">
+  <!-- MODE BAR -->
+  <div class="mode-bar">
+    <div class="mode-tab on perso" id="mode-perso" onclick="setMode('perso')">👤 Finances Personnelles</div>
+    <div class="mode-tab biz" id="mode-biz" onclick="setMode('biz')">🏢 Gérer mon Business</div>
+  </div>
+  <nav class="tnav" id="mnav">
+    <button class="hamb" onclick="togSB()">☰</button>
+    <div class="tbrand" id="nbrand">Xiif XamXam</div>
+    <div class="ttabs">
+      <div class="ntab on" onclick="gp('db')" data-p="db">🏠</div>
+      <div class="ntab" onclick="gp('tx')" data-p="tx">💳</div>
+      <div class="ntab" onclick="gp('plans')" data-p="plans">📊</div>
+      <div class="ntab" onclick="gp('dettes')" data-p="dettes">⚠️</div>
+      <div class="ntab" onclick="gp('export')" data-p="export">⬇️</div>
+      <div class="ntab" onclick="gp('param')" data-p="param">⚙️</div>
+    </div>
+    <div class="tnav-r">
+      <button class="ubtn" onclick="doLogout()">
+        <div class="av" id="uav">?</div><span id="unm">…</span><span style="color:var(--s4);font-size:12px;">⏻</span>
+      </button>
+    </div>
+  </nav>
+  <div class="abody">
+    <!-- SIDEBAR PERSO -->
+    <aside class="sb" id="sb">
+      <div class="sb-qadd">
+        <div class="sb-ql">Ajouter</div>
+        <div class="sb-btns">
+          <button class="qb qg" onclick="oaTx('revenu')">+ Revenu</button>
+          <button class="qb qr" onclick="oaTx('depense')">+ Dépense</button>
+          <button class="qb qa" onclick="oaND()">⚠️ Contracter dette</button>
+          <button class="qb qep" onclick="oaRet()">↩ Retrait épargne</button>
+        </div>
+      </div>
+      <div class="sdiv"></div>
+      <nav class="sb-nav">
+        <div class="sni on" onclick="gp('db')" data-p="db"><span class="ico">🏠</span><span class="lbl">Tableau de bord</span></div>
+        <div class="sni" onclick="gp('tx')" data-p="tx"><span class="ico">💳</span><span class="lbl">Transactions</span></div>
+        <div class="sdiv"></div>
+        <div class="ssec">Plans</div>
+        <div class="sni" onclick="gp('plans')" data-p="plans"><span class="ico">📊</span><span class="lbl">Tous les plans</span></div>
+        <div class="sni" onclick="gp('don')" data-p="don"><span class="ico">🤲</span><span class="lbl">Plan Don</span><span class="badge" id="sb-don">10%</span></div>
+        <div class="sni" onclick="gp('epargne')" data-p="epargne"><span class="ico">💳</span><span class="lbl">Plan Épargne</span><span class="badge" id="sb-ep">10%</span></div>
+        <div class="sni" onclick="gp('invest')" data-p="invest"><span class="ico">📈</span><span class="lbl">Investissement</span><span class="badge" id="sb-inv">5%</span></div>
+        <div class="sni" onclick="gp('dettes')" data-p="dettes"><span class="ico">⚠️</span><span class="lbl">Dettes</span><span class="badge" id="sb-det">10%</span></div>
+        <div class="sni" onclick="gp('conso')" data-p="conso"><span class="ico">🛒</span><span class="lbl">Consommation</span><span class="badge" id="sb-con">65%</span></div>
+        <div class="sdiv"></div>
+        <div class="sni" onclick="gp('export')" data-p="export"><span class="ico">⬇️</span><span class="lbl">Export Excel</span></div>
+        <div class="sni" onclick="gp('param')" data-p="param"><span class="ico">⚙️</span><span class="lbl">Paramètres</span></div>
+      </nav>
+      <div class="sb-bot">
+        <label><span class="sdo" id="sdo"></span> Mois actif</label>
+        <select id="msel" onchange="chMois(this.value)">
+          <option value="0">Mars 2026</option><option value="1">Avril 2026</option>
+          <option value="2">Mai 2026</option><option value="3">Juin 2026</option>
+          <option value="4">Juillet 2026</option><option value="5">Août 2026</option>
+          <option value="6">Septembre 2026</option>
+        </select>
+      </div>
+    </aside>
+    <!-- SIDEBAR BIZ -->
+    <aside class="sb bsb" id="sbb" style="display:none;">
+      <div class="sb-qadd">
+        <div class="sb-ql">Actions rapides</div>
+        <div class="sb-btns">
+          <button class="qb qcy" onclick="oNewCmd()" style="grid-column:span 2">+ Nouvelle commande</button>
+          <button class="qb qg" onclick="oNewCharge()">+ Charge fixe</button>
+          <button class="qb qpk" onclick="oNewFou()">+ Fournisseur</button>
+        </div>
+      </div>
+      <div class="sdiv"></div>
+      <nav class="sb-nav">
+        <div class="sni on" onclick="gpB('biz-db')" data-bp="biz-db"><span class="ico">🏢</span><span class="lbl">Dashboard</span></div>
+        <div class="sni" onclick="gpB('biz-cmd')" data-bp="biz-cmd"><span class="ico">📋</span><span class="lbl">Commandes clients</span></div>
+        <div class="sni" onclick="gpB('biz-charges')" data-bp="biz-charges"><span class="ico">💸</span><span class="lbl">Charges fixes</span></div>
+        <div class="sni" onclick="gpB('biz-fou')" data-bp="biz-fou"><span class="ico">🏭</span><span class="lbl">Fournisseurs &amp; Stock</span></div>
+        <div class="sni" onclick="gpB('biz-sal')" data-bp="biz-sal"><span class="ico">💰</span><span class="lbl">Mon salaire</span></div>
+        <div class="sni" onclick="gpB('biz-set')" data-bp="biz-set"><span class="ico">⚙️</span><span class="lbl">Mes business</span></div>
+      </nav>
+      <div class="sb-bot">
+        <label>🏢 Business actif</label>
+        <select id="bsel" onchange="chBiz(this.value)"></select>
+        <div style="height:8px;"></div>
+        <label><span class="sdo" id="sdo-b"></span> Mois</label>
+        <select id="mselb" onchange="chMoisB(this.value)">
+          <option value="0">Mars 2026</option><option value="1">Avril 2026</option>
+          <option value="2">Mai 2026</option><option value="3">Juin 2026</option>
+          <option value="4">Juillet 2026</option><option value="5">Août 2026</option>
+          <option value="6">Septembre 2026</option>
+        </select>
+      </div>
+    </aside>
+    <!-- MAIN CONTENT -->
     <div class="cnt">
-        <div class="pg on" id="pg-db">
-            <div class="grid4">
-                <div class="card" style="border-top:4px solid var(--g); cursor:pointer" onclick="oaTx('revenu')">💰 Revenu</div>
-                <div class="card" style="border-top:4px solid var(--r); cursor:pointer" onclick="oaTx('depense')">💸 Dépense</div>
-                <div class="card" style="border-top:4px solid var(--am); cursor:pointer" onclick="gp('db')">⚠️ Dettes</div>
-                <div class="card" style="border-top:4px solid var(--b); cursor:pointer" onclick="gp('rep')">📊 Rapports</div>
-            </div>
-
-            <h3 class="kl">Vos Plans</h3>
-            <div class="grid-plans" id="plan-grid"></div>
-
-            <div class="card">
-                <div class="fb tsm">Dernières Activités</div>
-                <div id="dbrec"></div>
-            </div>
+      <!-- PERSO PAGES -->
+      <div class="pg on" id="pg-db">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div><div style="font-size:21px;font-weight:800;letter-spacing:-.5px;" id="dbtit">Tableau de bord</div>
+            <div class="tsm tmu mt2"><span class="sdo" id="sdo2"></span> Synchronisé</div></div>
+          <div class="flex gi2 fw">
+            <button class="btn bg" onclick="oaTx('revenu')">💚 Ajouter un revenu</button>
+            <button class="btn br2" onclick="oaTx('depense')">🔴 Ajouter une dépense</button>
+            <button class="btn bam" onclick="oaND()">⚠️ Contracter une dette</button>
+          </div>
         </div>
-
-        <div class="pg" id="pg-cfg">
-            <h2 style="margin-bottom:20px;">⚙️ Ajuster vos Pourcentages</h2>
-            <div class="card">
-                <div class="fl"><label>Consommation (%)</label><input type="number" id="cfg-conso"></div>
-                <div class="fl"><label>Épargne (%)</label><input type="number" id="cfg-epargne"></div>
-                <div class="fl"><label>Investissement (%)</label><input type="number" id="cfg-invest"></div>
-                <div class="fl"><label>Don (%)</label><input type="number" id="cfg-don"></div>
-                <div class="fl"><label>Dette (%)</label><input type="number" id="cfg-dette"></div>
-                <p class="tsm tmu">Total doit être = 100%</p>
-                <button class="btn bg" onclick="saveSettings()">Enregistrer les changements</button>
-                <button class="btn bo" onclick="gp('db')">Retour</button>
-            </div>
+        <div class="kg" id="dbkpi"></div>
+        <div class="prow" id="dbplans"></div>
+        <div class="card"><div class="flex aic jb mb3"><div style="font-size:14px;font-weight:700;">Transactions récentes</div><button class="btn bo bsm" onclick="gp('tx')">Voir tout →</button></div><div id="dbrec"></div></div>
+      </div>
+      <div class="pg" id="pg-tx">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">Transactions</div>
+          <div class="flex gi2"><button class="btn bg" onclick="oaTx('revenu')">+ Revenu</button><button class="btn br2" onclick="oaTx('depense')">+ Dépense</button></div>
         </div>
-
-        <div class="pg" id="pg-rep">
-            <h2>📊 Rapports & Exports</h2>
-            <div class="card">
-                <p class="tsm tmu" style="margin-bottom:15px">Téléchargez votre historique complet sous format Excel.</p>
-                <div class="ex-row">
-                    <button class="btn bb" onclick="exportExcel(1)">1 Mois</button>
-                    <button class="btn bb" onclick="exportExcel(3)">3 Mois</button>
-                    <button class="btn bb" onclick="exportExcel(6)">6 Mois</button>
-                </div>
-                <button class="btn bo" style="margin-top:20px" onclick="gp('db')">Retour</button>
-            </div>
+        <div class="tbar">
+          <div class="tbtn on" onclick="stt('tout')" id="tt-tout">Tout</div>
+          <div class="tbtn" onclick="stt('rev')" id="tt-rev">Revenus</div>
+          <div class="tbtn" onclick="stt('dep')" id="tt-dep">Dépenses</div>
         </div>
+        <div class="flex gi2 fw mb4">
+          <div class="fs f1" style="min-width:140px;"><label>Rechercher</label><input id="tsx" placeholder="Description…" oninput="rTx()"/></div>
+          <div class="fs" style="width:150px;"><label>Plan</label>
+            <select id="tspf" onchange="rTx()">
+              <option value="">Tous les plans</option>
+              <option value="don">Don</option><option value="epargne">Épargne</option>
+              <option value="invest">Investissement</option><option value="dette">Dettes</option>
+              <option value="conso">Consommation</option>
+            </select>
+          </div>
+        </div>
+        <div id="txlist"></div>
+      </div>
+      <div class="pg" id="pg-plans"><div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">Plans budgétaires</div><div id="plc"></div></div>
+      <div class="pg" id="pg-don"><div class="flex aic jb mb4"><div style="font-size:21px;font-weight:800;">🤲 Plan Don</div><button class="btn bg bsm" onclick="oaTx('depense');sv('txpl','don');upSub()">+ Dépense Don</button></div><div id="plc-don"></div></div>
+      <div class="pg" id="pg-epargne"><div class="flex aic jb mb4" style="flex-wrap:wrap;gap:8px;"><div style="font-size:21px;font-weight:800;">💳 Plan Épargne</div><div class="flex gi2"><button class="btn bg bsm" onclick="oaTx('depense');sv('txpl','epargne');upSub()">+ Épargner</button><button class="btn bb bsm" onclick="oaRet()">↩ Retirer</button></div></div><div id="plc-epargne"></div></div>
+      <div class="pg" id="pg-invest"><div class="flex aic jb mb4"><div style="font-size:21px;font-weight:800;">📈 Plan Investissement</div><button class="btn bg bsm" onclick="oaTx('depense');sv('txpl','invest');upSub()">+ Dépense Invest.</button></div><div id="plc-invest"></div></div>
+      <div class="pg" id="pg-conso"><div class="flex aic jb mb4"><div style="font-size:21px;font-weight:800;">🛒 Plan Consommation</div><button class="btn bg bsm" onclick="oaTx('depense');sv('txpl','conso');upSub()">+ Dépense</button></div><div id="plc-conso"></div></div>
+      <div class="pg" id="pg-dettes">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">⚠️ Dettes</div>
+          <button class="btn bam" onclick="oaND()">⚠️ Contracter une dette</button>
+        </div>
+        <div id="detc"></div>
+      </div>
+      <div class="pg" id="pg-export">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">Export Excel</div>
+        <div class="card mb4">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Période</div>
+          <div class="efchips" id="efp"><div class="ec on" onclick="sePer(this,'mois')">Ce mois</div><div class="ec" onclick="sePer(this,'3mois')">3 mois</div><div class="ec" onclick="sePer(this,'6mois')">6 mois</div><div class="ec" onclick="sePer(this,'all')">Tout</div></div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;margin-top:14px;">Plan</div>
+          <div class="efchips" id="efpl"><div class="ec on" onclick="sePlan(this,'all')">Tous</div><div class="ec" onclick="sePlan(this,'don')">Don</div><div class="ec" onclick="sePlan(this,'epargne')">Épargne</div><div class="ec" onclick="sePlan(this,'invest')">Investissement</div><div class="ec" onclick="sePlan(this,'dette')">Dettes</div><div class="ec" onclick="sePlan(this,'conso')">Consommation</div></div>
+          <div id="exprev" class="mt4"></div>
+          <button class="btn bg mt4" onclick="doExp()">⬇️ Télécharger Excel</button>
+        </div>
+      </div>
+      <div class="pg" id="pg-param">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;">Paramètres</div>
+        <p class="tsm tmu mb4">Le total de tous les plans doit être égal à 100%.</p>
+        <div id="parc"></div>
+      </div>
+      <!-- BIZ PAGES -->
+      <div class="pg" id="pg-biz-db"><div id="bdb"></div></div>
+      <div class="pg" id="pg-biz-cmd">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">📋 Commandes Clients</div>
+          <button class="btn bcy" onclick="oNewCmd()">+ Nouvelle commande</button>
+        </div>
+        <div class="tbar">
+          <div class="tbtn cy on" onclick="sttC('tout')" id="ct-tout">Toutes</div>
+          <div class="tbtn cy" onclick="sttC('en-cours')" id="ct-en-cours">En cours</div>
+          <div class="tbtn cy" onclick="sttC('termine')" id="ct-termine">Terminées</div>
+          <div class="tbtn cy" onclick="sttC('annule')" id="ct-annule">Annulées</div>
+        </div>
+        <div id="cmdlist"></div>
+      </div>
+      <div class="pg" id="pg-biz-charges">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">💸 Charges Fixes</div>
+          <button class="btn bcy" onclick="oNewCharge()">+ Nouvelle charge</button>
+        </div>
+        <div id="chglist"></div>
+      </div>
+      <div class="pg" id="pg-biz-fou">
+        <div class="flex aic jb mb4" style="flex-wrap:wrap;gap:10px;">
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;">🏭 Fournisseurs &amp; Stock</div>
+          <button class="btn bpk" onclick="oNewFou()">+ Fournisseur</button>
+        </div>
+        <div id="foulist"></div>
+      </div>
+      <div class="pg" id="pg-biz-sal">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">💰 Mon Salaire Dirigeant</div>
+        <div id="salc"></div>
+      </div>
+      <div class="pg" id="pg-biz-set">
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:16px;">⚙️ Mes Business</div>
+        <div id="bizsett"></div>
+      </div>
     </div>
+  </div>
 </div>
 
+<!-- MODAL TX PERSO -->
 <div class="ov" id="ov-tx">
-    <div class="mo">
-        <h3 id="m-tit">Nouvelle saisie</h3><br>
-        <input type="hidden" id="txtp">
-        <div class="fl"><label>Description</label><input id="txds" placeholder="Ex: Salaire ou Loyer"></div>
-        <div class="fl"><label>Montant (FCFA)</label><input id="txam" type="number"></div>
-        <div class="fl"><label>Date</label><input id="txdt" type="date"></div>
-        
-        <div id="txpf">
-            <div class="fl"><label>Plan ciblé</label>
-                <select id="txpl" onchange="upSubOpts()">
-                    <option value="conso">🛒 Consommation</option>
-                    <option value="epargne">💳 Épargne</option>
-                    <option value="don">🤲 Don</option>
-                    <option value="dette">⚠️ Dette</option>
-                    <option value="invest">📈 Invest</option>
-                </select>
-            </div>
-            <div class="fl"><label>Sous-catégorie</label><select id="txsc"></select></div>
-        </div>
-        <button class="btn bg" onclick="savTx()">Confirmer</button>
-        <button class="btn bo" onclick="cov('ov-tx')">Annuler</button>
+  <div class="mo">
+    <h2 id="txmot">Nouvelle transaction</h2>
+    <div class="mof">
+      <div class="fl"><label>Type</label><select id="txtp" onchange="upPlan()"><option value="revenu">💚 Revenu</option><option value="depense">🔴 Dépense</option></select></div>
+      <div class="fl"><label>Description</label><input id="txds" placeholder="Ex: Salaire, Transport…"/></div>
+      <div class="fl"><label>Montant (FCFA)</label><input id="txam" type="number" min="1" placeholder="25000"/></div>
+      <div class="fl"><label>Date</label><input id="txdt" type="date"/></div>
+      <div class="fl" id="txpf"><label>Plan</label>
+        <select id="txpl" onchange="upSub()">
+          <option value="don">🤲 Plan Don</option><option value="epargne">💳 Plan Épargne</option>
+          <option value="invest">📈 Plan Investissement</option><option value="dette">⚠️ Paiement Dettes</option>
+          <option value="conso" selected>🛒 Plan Consommation</option>
+        </select>
+      </div>
+      <div class="fl"><label>Sous-catégorie</label><select id="txsc"><option value="">— Général —</option></select></div>
+      <div class="fl"><label>Note</label><input id="txnt" placeholder="Note optionnelle…"/></div>
     </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-tx')">Annuler</button><button class="btn bg" id="bstx" onclick="savTx()">Enregistrer</button></div>
+  </div>
 </div>
 
+<!-- MODAL NOUVELLE DETTE -->
+<div class="ov" id="ov-nd">
+  <div class="mo">
+    <h2>⚠️ Contracter une dette</h2>
+    <div class="mof">
+      <div class="fl"><label>Type</label><select id="nd-tp" onchange="updNDT()"><option value="argent">💰 En argent</option><option value="nature">📦 En nature</option></select></div>
+      <div class="fl"><label>Créancier</label><input id="nd-cr" placeholder="Ex: Amadou Ba, BOA…"/></div>
+      <div class="fl" id="nd-mf"><label>Montant reçu (FCFA)</label><input id="nd-mt" type="number" placeholder="100000" min="1"/></div>
+      <div class="fl" id="nd-nf" style="display:none;"><label>Description (objet/service)</label><input id="nd-ds" placeholder="Ex: Sac de riz, chaussures…"/></div>
+      <div class="fl" id="nd-vf" style="display:none;"><label>Valeur estimée (FCFA)</label><input id="nd-vl" type="number" placeholder="25000"/></div>
+      <div class="fl"><label>Date</label><input id="nd-dt" type="date"/></div>
+      <div class="fl"><label>Date limite remboursement</label><input id="nd-dl" type="date"/></div>
+      <div class="fl"><label>Mensualité prévue (FCFA)</label><input id="nd-mn" type="number" value="0"/></div>
+      <div class="fl"><label>Note</label><input id="nd-nt" placeholder="Conditions, accord…"/></div>
+      <div class="ib ib-g" id="nd-ro">
+        <input type="checkbox" id="nd-ar" checked style="margin-top:2px;accent-color:var(--g);width:16px;height:16px;flex-shrink:0;"/>
+        <label for="nd-ar" style="font-size:13px;font-weight:600;cursor:pointer;line-height:1.4;">Ajouter aux revenus du mois<br><span style="font-weight:400;color:var(--s6);">Le montant sera réparti dans les 5 plans</span></label>
+      </div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-nd')">Annuler</button><button class="btn bg" onclick="savND()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL MODIFIER DETTE -->
+<div class="ov" id="ov-det">
+  <div class="mo">
+    <h2>Modifier le créancier</h2>
+    <div class="mof">
+      <div class="fl"><label>Nom du créancier</label><input id="de-nm" placeholder="Ex: Amadou Ba…"/></div>
+      <div class="fl"><label>Type</label><select id="de-tp"><option value="argent">💰 Argent</option><option value="nature">📦 Nature</option></select></div>
+      <div class="fl"><label>Description</label><input id="de-ds" placeholder="Objet / service…"/></div>
+      <div class="fl"><label>Montant total (FCFA)</label><input id="de-tt" type="number" placeholder="150000"/></div>
+      <div class="fl"><label>Déjà remboursé (FCFA)</label><input id="de-py" type="number" value="0"/></div>
+      <div class="fl"><label>Date limite</label><input id="de-dl" type="date"/></div>
+      <div class="fl"><label>Mensualité (FCFA)</label><input id="de-mn" type="number" value="0"/></div>
+      <div class="fl"><label>Note</label><input id="de-nt" placeholder="Conditions…"/></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-det')">Annuler</button><button class="btn bg" onclick="savDet()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL PAIEMENT DETTE -->
+<div class="ov" id="ov-paie">
+  <div class="mo">
+    <h2>💸 Enregistrer un paiement</h2>
+    <div class="mof">
+      <div id="pinfo" class="ib ib-r"></div>
+      <div class="fl"><label>Montant payé (FCFA)</label><input id="pamt" type="number" placeholder="25000"/></div>
+      <div class="fl"><label>Date</label><input id="pdat" type="date"/></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-paie')">Annuler</button><button class="btn bg" onclick="savPaie()">Confirmer</button></div>
+  </div>
+</div>
+
+<!-- MODAL RETRAIT ÉPARGNE -->
+<div class="ov" id="ov-ret">
+  <div class="mo">
+    <h2>💳 Retrait d'épargne</h2>
+    <div class="mof">
+      <div id="ret-info" class="ib ib-g"></div>
+      <div class="fl"><label>Montant à retirer (FCFA)</label><input id="ret-am" type="number" placeholder="50000" min="1"/></div>
+      <div class="fl"><label>Date</label><input id="ret-dt" type="date"/></div>
+      <div class="fl"><label>Motif / Destination</label><input id="ret-mo" placeholder="Ex: Achat téléphone…"/></div>
+      <div class="ib ib-b"><span>ℹ️</span><span style="font-size:13px;">Le montant sera <strong>ajouté à tes revenus disponibles</strong>.</span></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-ret')">Annuler</button><button class="btn bg" onclick="savRet()">Confirmer le retrait</button></div>
+  </div>
+</div>
+
+<!-- MODAL NOUVEAU BUSINESS -->
+<div class="ov" id="ov-nb">
+  <div class="mo">
+    <h2>🏢 Créer un nouveau business</h2>
+    <div class="mof">
+      <div class="fl"><label>Nom du business</label><input id="nb-nm" placeholder="Ex: Imprimerie Xiif, Xiif Coaching…"/></div>
+      <div class="fl"><label>Secteur d'activité</label>
+        <select id="nb-tp">
+          <option value="impression">🖨️ Imprimerie / Design</option>
+          <option value="commerce">🛒 Commerce / Vente</option>
+          <option value="service">🤝 Services / Conseil</option>
+          <option value="coaching">🎯 Coaching / Formation</option>
+          <option value="resto">🍽️ Restauration / Alimentation</option>
+          <option value="tech">💻 Tech / Numérique</option>
+          <option value="agri">🌱 Agriculture / Élevage</option>
+          <option value="autre">📦 Autre</option>
+        </select>
+      </div>
+      <div class="fl"><label>Description courte</label><input id="nb-ds" placeholder="Ex: Impression supports visuels et textiles…"/></div>
+      <div class="fl"><label>Salaire dirigeant prévu / mois (FCFA)</label><input id="nb-sl" type="number" placeholder="400000" min="0"/></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-nb')">Annuler</button><button class="btn bcy" onclick="savNB()">Créer le business</button></div>
+  </div>
+</div>
+
+<!-- MODAL NOUVELLE COMMANDE -->
+<div class="ov" id="ov-cmd">
+  <div class="mo" style="max-width:520px;">
+    <h2 id="cmd-mot">📋 Nouvelle commande</h2>
+    <div class="mof">
+      <div class="fl"><label>Nom du client</label><input id="cmd-cl" placeholder="Ex: Moussa Diop, ONG ENDA…"/></div>
+      <div class="fl"><label>Description de la commande</label><input id="cmd-ds" placeholder="Ex: Impression 200 tee-shirts avec logo…"/></div>
+      <div class="fl"><label>Date de commande</label><input id="cmd-dt" type="date"/></div>
+      <div class="fl"><label>Date de livraison prévue</label><input id="cmd-dl" type="date"/></div>
+      <div class="fl"><label>Prix de vente total (FCFA)</label><input id="cmd-px" type="number" placeholder="150000" min="0" oninput="updCmdCalc()"/></div>
+      <div style="font-size:13px;font-weight:700;color:var(--s7);">Coûts variables (matières premières)</div>
+      <div id="cv-lines" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button class="btn bo bsm" onclick="addCvLine()" style="align-self:flex-start;">+ Ajouter coût variable</button>
+      <div class="fl"><label>Statut</label>
+        <select id="cmd-st">
+          <option value="en-cours">⏳ En cours</option>
+          <option value="termine">✅ Terminée</option>
+          <option value="annule">❌ Annulée</option>
+        </select>
+      </div>
+      <div class="fl"><label>Note</label><input id="cmd-nt" placeholder="Note optionnelle…"/></div>
+      <div class="ib ib-cy" id="cmd-calc" style="display:none;"><div style="font-size:13px;line-height:1.8;" id="cmd-calc-txt"></div></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-cmd')">Annuler</button><button class="btn bcy" id="bscmd" onclick="savCmd()">Enregistrer la commande</button></div>
+  </div>
+</div>
+
+<!-- MODAL NOUVELLE CHARGE -->
+<div class="ov" id="ov-chg">
+  <div class="mo">
+    <h2 id="chg-mot">💸 Nouvelle charge fixe</h2>
+    <div class="mof">
+      <div class="fl"><label>Désignation</label><input id="chg-nm" placeholder="Ex: Électricité, Loyer local…"/></div>
+      <div class="fl"><label>Montant (FCFA)</label><input id="chg-am" type="number" placeholder="50000" min="0"/></div>
+      <div class="fl"><label>Catégorie</label>
+        <select id="chg-ct">
+          <option value="loyer">🏠 Loyer / Local</option>
+          <option value="energie">⚡ Électricité / Eau</option>
+          <option value="internet">📡 Internet / Téléphone</option>
+          <option value="salaires">👥 Salaires employés</option>
+          <option value="stock">📦 Stock fixe</option>
+          <option value="transport">🚗 Transport / Carburant</option>
+          <option value="assurance">🛡️ Assurance</option>
+          <option value="autre">📋 Autre</option>
+        </select>
+      </div>
+      <div class="fl"><label>Fréquence</label>
+        <select id="chg-fr">
+          <option value="mensuel">📅 Mensuel</option>
+          <option value="trimestriel">📅 Trimestriel</option>
+          <option value="annuel">📅 Annuel</option>
+          <option value="unique">1️⃣ Unique</option>
+        </select>
+      </div>
+      <div class="fl"><label>Note</label><input id="chg-nt" placeholder="Note optionnelle…"/></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-chg')">Annuler</button><button class="btn bcy" id="bschg" onclick="savChg()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL NOUVEAU FOURNISSEUR -->
+<div class="ov" id="ov-fou">
+  <div class="mo">
+    <h2 id="fou-mot">🏭 Nouveau fournisseur</h2>
+    <div class="mof">
+      <div class="fl"><label>Nom du fournisseur</label><input id="fou-nm" placeholder="Ex: Imprimerie Dakar, Marché Sandaga…"/></div>
+      <div class="fl"><label>Produit fourni</label><input id="fou-ct" placeholder="Ex: Tee-shirts, Encres, Papier…"/></div>
+      <div class="fl"><label>Contact / Téléphone</label><input id="fou-tl" placeholder="Ex: 77 000 00 00"/></div>
+      <div class="fl"><label>Dernier achat (FCFA)</label><input id="fou-ac" type="number" placeholder="0" min="0"/></div>
+      <div class="fl"><label>Date dernier achat</label><input id="fou-dt" type="date"/></div>
+      <div class="fl"><label>Note</label><input id="fou-nt" placeholder="Conditions, délais livraison…"/></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-fou')">Annuler</button><button class="btn bpk" id="bsfou" onclick="savFou()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- MODAL SE VERSER SALAIRE -->
+<div class="ov" id="ov-sal">
+  <div class="mo">
+    <h2>💰 Se verser son salaire</h2>
+    <div class="mof">
+      <div id="sal-inf" class="ib ib-cy" style="flex-direction:column;gap:4px;"></div>
+      <div class="fl"><label>Montant à se verser (FCFA)</label><input id="sal-am" type="number" placeholder="400000" min="1"/></div>
+      <div class="fl"><label>Date</label><input id="sal-dt" type="date"/></div>
+      <div class="fl"><label>Note</label><input id="sal-nt" placeholder="Ex: Salaire avril 2026…"/></div>
+      <div class="ib ib-g"><span>✅</span><div id="sal-calc" style="font-size:13px;"></div></div>
+    </div>
+    <div class="moa"><button class="btn bo" onclick="cov('ov-sal')">Annuler</button><button class="btn bcy" onclick="savSal()">✅ Confirmer le versement</button></div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="ov" id="ov-conf">
+  <div class="cmo">
+    <div class="ci">🗑️</div>
+    <div class="ct">Confirmer la suppression</div>
+    <div class="cd" id="ctxt">Êtes-vous sûr ?</div>
+    <div class="flex gi2" style="justify-content:center;">
+      <button class="btn bo" onclick="cov('ov-conf')">Annuler</button>
+      <button class="btn br2" id="bconf">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const MN=['Mars 2026','Avril 2026','Mai 2026','Juin 2026','Juillet 2026','Août 2026','Septembre 2026'];
+const DP={don:.10,epargne:.10,invest:.05,dette:.10,conso:.65};
+const PC={
+  don:{lb:'Plan Don',ic:'🤲',co:'#D97706',bg:'#FEF3C7',bge:'bga'},
+  epargne:{lb:'Plan Épargne',ic:'💳',co:'#16A34A',bg:'#DCFCE7',bge:'bgg'},
+  invest:{lb:'Plan Investissement',ic:'📈',co:'#2563EB',bg:'#DBEAFE',bge:'bgb'},
+  dette:{lb:'Paiement Dettes',ic:'⚠️',co:'#DC2626',bg:'#FEE2E2',bge:'bgr'},
+  conso:{lb:'Plan Consommation',ic:'🛒',co:'#7C3AED',bg:'#EDE9FE',bge:'bgp'},
+};
+const PK=['don','epargne','invest','dette','conso'];
+const DI={
+  don:['Sadaqa / Aumône','Zakat si applicable','Aides familiales','Solidarité communautaire','Cadeaux famille/amis'],
+  epargne:['BOA / Banque','Tontine / AVEC',"Fonds d'urgence",'Objectif moyen terme','Retraite'],
+  invest:['Commerce en ligne','Agriculture maraîchère','Aviculture','BRVM / Bourse','Terrain'],
+  dette:[],
+  conso:['Ravitaillement foyer','Transport','Eau / Électricité','Internet / Mobile','Scolarité','Santé','Habits','Sorties','Imprévus'],
+};
+const BT={impression:'🖨️',commerce:'🛒',service:'🤝',coaching:'🎯',resto:'🍽️',tech:'💻',agri:'🌱',autre:'📦'};
+const CI={loyer:'🏠',energie:'⚡',internet:'📡',salaires:'👥',stock:'📦',transport:'🚗',assurance:'🛡️',autre:'📋'};
+
+// ============================================================
+// STATE
+// ============================================================
+let S=null,mi=0,cp='db',cu=null,stmr=null;
+let txTab='tout',exPer='mois',exPl='all';
+let eTxId=null,eDtId=null,pDtId=null,undoD=null;
+let curMode='perso',curBizId=null,bmi=0,curBizPg='biz-db';
+let eCmdId=null,eChgId=null,eFouId=null,cvLines=[];
+
+// ============================================================
+// DATA MODELS
+// ============================================================
+function dM(){return{revenus:[],items:Object.fromEntries(PK.map(k=>[k,(DI[k]||[]).map(n=>({id:uid(),name:n,bp:0,dep:0}))])),dettes:[],depenses:[]};}
+function dS(){return{mois:Array.from({length:7},()=>dM()),par:{},businesses:[]};}
+function dBM(){return{commandes:[],charges:[],versements:[]};}
+function dBiz(nom,type,desc,sal){return{id:uid(),nom,type,desc,salPrev:sal||0,fournisseurs:[],mois:Array.from({length:7},()=>dBM())};}
+function M(){return S.mois[mi];}
+function B(){return S.businesses?.find(b=>b.id===curBizId)||null;}
+function BM(){const b=B();return b?b.mois[bmi]:null;}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function gp2(k){return S?.par?.[k]??DP[k];}
+
+// ============================================================
+// AUTH
+// ============================================================
+window._onUserReady=function(u){cu=u;ldData(u.uid);};
+function showScreen(s){
+  document.getElementById('ld').style.display='none';
+  document.getElementById('au').style.display=s==='auth'?'flex':'none';
+  const a=document.getElementById('ap');
+  a.style.display=s==='app'?'flex':'none';
+  a.classList.toggle('on',s==='app');
+}
+async function doLogin(){
+  const e=g('le'),p=g('lp');
+  if(!e){sErr('Email requis');return;}if(!p){sErr('Mot de passe requis');return;}
+  const b=document.querySelector('#fl .bpri');bld(b,'Connexion…');
+  try{await window._fbReady;await window._fb.signInWithEmailAndPassword(window._fb.auth,e,p);hErr();}
+  catch(x){sErr(fE(x.code));bld(b,'Se connecter',false);}
+}
+async function doRegister(){
+  const n=g('rn')||'Utilisateur',e=g('re'),p=g('rp2');
+  if(!e){sErr('Email requis');return;}if(!p||p.length<6){sErr('Mot de passe : 6 car. min.');return;}
+  const b=document.querySelector('#fr .bpri');bld(b,'Création…');
+  try{
+    await window._fbReady;
+    const{auth,createUserWithEmailAndPassword,updateProfile}=window._fb;
+    const c=await createUserWithEmailAndPassword(auth,e,p);
+    await updateProfile(c.user,{displayName:n});hErr();
+  }catch(x){sErr(fE(x.code));bld(b,'Créer mon compte',false);}
+}
+async function doLogout(){await window._fbReady;await window._fb.signOut(window._fb.auth);S=null;cu=null;showScreen('auth');}
+
+// ============================================================
+// DATA LOAD / PERSIST
+// ============================================================
+async function ldData(uid2){
+  await window._fbReady;const{db,doc,getDoc}=window._fb;
+  try{
+    const sn=await getDoc(doc(db,'users',uid2));
+    S=sn.exists()?JSON.parse(JSON.stringify(sn.data())):dS();
+    if(!S.par)S.par={};if(!S.mois)S.mois=[];if(!S.businesses)S.businesses=[];
+    while(S.mois.length<7)S.mois.push(dM());
+    S.mois.forEach(m=>{
+      if(!m.revenus)m.revenus=[];if(!m.depenses)m.depenses=[];if(!m.dettes)m.dettes=[];if(!m.items)m.items={};
+      PK.forEach(k=>{
+        if(!m.items[k])m.items[k]=[];
+        m.items[k].forEach(it=>{
+          if(it.budgetPrevu!==undefined&&it.bp===undefined)it.bp=it.budgetPrevu;
+          if(it.depense!==undefined&&it.dep===undefined)it.dep=it.depense;
+          if(it.bp===undefined)it.bp=0;if(it.dep===undefined)it.dep=0;if(!it.id)it.id=uid();
+        });
+      });
+      m.dettes.forEach(d=>{if(d.paye===undefined)d.paye=0;if(d.total===undefined)d.total=0;if(!d.hist)d.hist=[];if(!d.type)d.type='argent';if(!d.id)d.id=uid();});
+    });
+    S.businesses.forEach(b=>{
+      if(!b.id)b.id=uid();if(!b.fournisseurs)b.fournisseurs=[];if(!b.mois)b.mois=[];
+      while(b.mois.length<7)b.mois.push(dBM());
+      b.mois.forEach(bm=>{if(!bm.commandes)bm.commandes=[];if(!bm.charges)bm.charges=[];if(!bm.versements)bm.versements=[];});
+    });
+    if(S.businesses.length>0&&!curBizId)curBizId=S.businesses[0].id;
+    const ini=(cu.displayName||cu.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('uav').textContent=ini;
+    document.getElementById('unm').textContent=cu.displayName||cu.email.split('@')[0];
+    ['txdt','pdat','ret-dt','nd-dt','cmd-dt','sal-dt','fou-dt'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=td();});
+    showScreen('app');updSB();updBSel();gp('db');
+    if(sn.exists())persist();
+  }catch(x){console.error(x);showScreen('auth');}
+}
+function sSyn(on){['sdo','sdo2','sdo-b'].forEach(id=>document.getElementById(id)?.classList.toggle('sy',on));}
+async function persist(){
+  if(!cu||!S)return;sSyn(true);
+  await window._fbReady;const{db,doc,setDoc}=window._fb;
+  try{await setDoc(doc(db,'users',cu.uid),JSON.parse(JSON.stringify(S)));}
+  catch(x){toast('Erreur sauvegarde','er');}sSyn(false);
+}
+function sch(){clearTimeout(stmr);sSyn(true);stmr=setTimeout(persist,1400);}
+
+// ============================================================
+// MODE SWITCH
+// ============================================================
+function setMode(mode){
+  curMode=mode;
+  const nav=document.getElementById('mnav');
+  document.getElementById('mode-perso').classList.toggle('on',mode==='perso');
+  document.getElementById('mode-biz').classList.toggle('on',mode==='biz');
+  if(mode==='perso'){
+    nav.classList.remove('bm');
+    document.getElementById('sb').style.display='';document.getElementById('sbb').style.display='none';
+    document.getElementById('nbrand').textContent='Xiif XamXam';
+    document.querySelectorAll('.pg').forEach(e=>e.classList.remove('on'));
+    gp(cp||'db');
+  }else{
+    nav.classList.add('bm');
+    document.getElementById('sb').style.display='none';document.getElementById('sbb').style.display='flex';
+    document.getElementById('nbrand').textContent='Business Manager';
+    document.querySelectorAll('.pg').forEach(e=>e.classList.remove('on'));
+    updBSel();
+    if(!S.businesses?.length)gpB('biz-set');else gpB('biz-db');
+  }
+}
+function togSB(){
+  if(curMode==='perso')document.getElementById('sb')?.classList.toggle('mob');
+  else document.getElementById('sbb')?.classList.toggle('mob');
+}
+
+// ============================================================
+// PERSO FINANCE CALCS
+// ============================================================
+function tRev(i){return(S.mois[i].revenus||[]).reduce((s,r)=>s+r.amount,0);}
+function gRep(i,k){if(i===0)return 0;return Math.max(0,tRev(i-1)*gp2(k)+gRep(i-1,k)-pDep(i-1,k));}
+function bgt(i,k){return tRev(i)*gp2(k)+gRep(i,k);}
+function pDep(i,k){
+  const m=S.mois[i];
+  if(k==='dette')return(m.dettes||[]).reduce((s,d)=>s+d.paye,0);
+  return(m.items[k]||[]).reduce((s,it)=>s+it.dep,0)+(m.depenses||[]).filter(d=>d.plan===k).reduce((s,d)=>s+d.amount,0);
+}
+function aTx(i){
+  const m=S.mois[i];
+  return[...(m.revenus||[]).map(r=>({...r,type:'revenu',plan:null})),...(m.depenses||[]).map(d=>({...d,type:'depense'}))].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+
+// ============================================================
+// NAV PERSO
+// ============================================================
+function gp(p){
+  cp=p;
+  document.querySelectorAll('.pg').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.ntab,[data-p]').forEach(e=>e.classList.remove('on'));
+  document.getElementById('pg-'+p)?.classList.add('on');
+  document.querySelector(`[data-p="${p}"]`)?.classList.add('on');
+  if(window.innerWidth<=768)document.getElementById('sb')?.classList.remove('mob');
+  rp(p);
+}
+function chMois(v){mi=parseInt(v);rp(cp);}
+function rp(p){
+  if(!S)return;
+  if(p==='db')rDash();else if(p==='tx')rTx();else if(p==='plans')rPlans();
+  else if(['don','epargne','invest','conso'].includes(p))rPS(p);
+  else if(p==='dettes')rDettes();else if(p==='export')rExp();else if(p==='param')rParam();
+}
+
+// ============================================================
+// DASHBOARD PERSO
+// ============================================================
+function rDash(){
+  const rev=tRev(mi),m=M(),t=td();
+  document.getElementById('dbtit').textContent='Tableau de bord — '+MN[mi];
+  const rt=(m.revenus||[]).filter(r=>r.date===t).reduce((s,r)=>s+r.amount,0);
+  const dt2=(m.depenses||[]).filter(d=>d.date===t).reduce((s,d)=>s+d.amount,0);
+  const tdp=PK.reduce((s,k)=>s+pDep(mi,k),0),sol=rev-tdp;
+  document.getElementById('dbkpi').innerHTML=[
+    ['Revenus du mois',f(rev),'FCFA','var(--g)'],
+    ['Dépenses du mois',f(tdp),'FCFA','var(--r)'],
+    ['Solde du mois',f(sol),'FCFA',sol>=0?'var(--g)':'var(--r)'],
+    ['Revenus aujourd\'hui',f(rt),'FCFA','var(--g)'],
+    ['Dépenses aujourd\'hui',f(dt2),'FCFA','var(--r)'],
+    ['Épargne',f(pDep(mi,'epargne')),'FCFA','var(--b)'],
+  ].map(([l,v,u,c],i)=>`<div class="kpi" style="border-left:4px solid ${c}"><div class="kl">${l}</div><div class="kv" style="color:${c}">${v}</div><div class="ks">${u}</div></div>`).join('');
+  document.getElementById('dbplans').innerHTML=PK.map(k=>{
+    const b=bgt(mi,k),d=pDep(mi,k),pct=b>0?Math.min(100,d/b*100):0,s=b-d;
+    return`<div class="pchip" style="background:${PC[k].bg};border-color:${PC[k].co}33" onclick="gp('${k==='dette'?'dettes':k}')">
+      <div class="pcn" style="color:${PC[k].co}">${PC[k].ic} ${PC[k].lb} · ${Math.round(gp2(k)*100)}%</div>
+      <div class="pcb" style="color:${PC[k].co}">${f(b)} FCFA</div>
+      <div class="pr" style="background:${PC[k].co}22;margin-top:7px"><div class="prt" style="width:${pct}%;background:${PC[k].co}"></div></div>
+      <div class="pcs" style="color:${PC[k].co}">Solde : ${f(s)} FCFA</div>
+    </div>`;
+  }).join('');
+  const rec=aTx(mi).slice(0,8);
+  const el=document.getElementById('dbrec');
+  el.innerHTML=rec.length?'<div class="txl">'+rec.map(tx=>txH(tx,false)).join('')+'</div>':'<div class="est"><div class="eico">💳</div><p>Aucune transaction.</p></div>';
+  updSB();
+}
+
+// ============================================================
+// TRANSACTIONS
+// ============================================================
+function stt(t){txTab=t;['tout','rev','dep'].forEach(x=>document.getElementById('tt-'+x)?.classList.toggle('on',x===t));rTx();}
+function rTx(){
+  const sx=(g('tsx')||'').toLowerCase(),pf=g('tspf');
+  let txs=aTx(mi);
+  if(txTab==='rev')txs=txs.filter(t=>t.type==='revenu');
+  if(txTab==='dep')txs=txs.filter(t=>t.type==='depense');
+  if(sx)txs=txs.filter(t=>(t.desc||t.source||'').toLowerCase().includes(sx));
+  if(pf)txs=txs.filter(t=>t.plan===pf);
+  const el=document.getElementById('txlist');
+  el.innerHTML=txs.length?'<div class="txl">'+txs.map(tx=>txH(tx,true)).join('')+'</div>':'<div class="est"><div class="eico">💳</div><p>Aucune transaction.</p></div>';
+}
+function txH(tx,ac){
+  const ir=tx.type==='revenu';
+  const ds=es(tx.source||tx.desc||'');
+  const pl=tx.plan?`<span class="bge ${PC[tx.plan]?.bge||'bgs'}">${PC[tx.plan]?.ic||''} ${PC[tx.plan]?.lb||tx.plan}</span>`:`<span class="bge bgg">Revenu${tx.isDette?' (dette)':tx.isRet?' (retrait ép.)':tx.isSalBiz?' (salaire biz)':''}</span>`;
+  const dc=tx.isRet?'ep':ir?'rv':'dp';
+  const ac2=ir?'p':(tx.isRet?'b':'n');
+  const btns=ac?`<div class="txac"><button class="bico ed" onclick="oeTx('${tx.id}','${tx.type}')">✏️</button><button class="bico dl" onclick="cDel('${tx.id}','${tx.type}','${es(ds)}')">🗑️</button></div>`:'';
+  return`<div class="txi"><div class="txd ${dc}"></div><div class="txinf"><div class="txdsc">${ds}</div><div class="txmt">${tx.date||''} ${tx.subcat?'· '+es(tx.subcat):''} ${pl}${tx.note?' · '+es(tx.note):''}</div></div><div class="txam ${ac2}">${ir?'+':'-'}${f(tx.amount)}</div>${btns}</div>`;
+}
+function oaTx(type){
+  eTxId=null;document.getElementById('txmot').textContent='Nouvelle transaction';
+  sv('txtp',type);sv('txds','');sv('txam','');sv('txdt',td());sv('txpl','conso');sv('txnt','');
+  upPlan();upSub();document.getElementById('bstx').textContent='Enregistrer';document.getElementById('bstx').disabled=false;
+  ov('ov-tx');
+}
+function oeTx(id,type){
+  const m=M();const tx=type==='revenu'?(m.revenus||[]).find(r=>r.id===id):(m.depenses||[]).find(d=>d.id===id);if(!tx)return;
+  eTxId=id;document.getElementById('txmot').textContent='Modifier la transaction';
+  sv('txtp',type);sv('txds',tx.source||tx.desc||'');sv('txam',tx.amount);sv('txdt',tx.date||td());sv('txpl',tx.plan||'conso');sv('txnt',tx.note||'');
+  upPlan();upSub();if(tx.subcat)sv('txsc',tx.subcat);
+  document.getElementById('bstx').textContent='Mettre à jour';document.getElementById('bstx').disabled=false;
+  ov('ov-tx');
+}
+function upPlan(){document.getElementById('txpf').style.display=g('txtp')==='revenu'?'none':'block';}
+function upSub(){
+  const pl=g('txpl'),items=M().items[pl]||[];
+  const sl=document.getElementById('txsc');
+  sl.innerHTML='<option value="">— Général —</option>'+items.filter(i=>i.name).map(i=>`<option value="${es(i.name)}">${es(i.name)}</option>`).join('');
+}
+async function savTx(){
+  const tp=g('txtp'),ds=g('txds'),am=parseFloat(g('txam')),dt=g('txdt'),pl=g('txpl'),sc=g('txsc'),nt=g('txnt');
+  if(!ds){toast('Description requise','er');return;}if(!am||am<1){toast('Montant invalide','er');return;}
+  const btn=document.getElementById('bstx');bld(btn,'…');
+  const m=M();
+  if(eTxId){
+    if(tp==='revenu'){const r=(m.revenus||[]).find(x=>x.id===eTxId);if(r)Object.assign(r,{source:ds,amount:am,date:dt,note:nt});}
+    else{const old=(m.depenses||[]).find(x=>x.id===eTxId);if(old){if(old.subcat){const it=(m.items[old.plan]||[]).find(i=>i.name===old.subcat);if(it)it.dep=Math.max(0,it.dep-old.amount);}Object.assign(old,{desc:ds,amount:am,date:dt,plan:pl,subcat:sc,note:nt});if(sc){const it=(m.items[pl]||[]).find(i=>i.name===sc);if(it)it.dep+=am;}}}
+    toast('Modifié ✓','sg');
+  }else{
+    if(tp==='revenu')m.revenus.push({id:uid(),source:ds,amount:am,date:dt,note:nt});
+    else{m.depenses.push({id:uid(),desc:ds,amount:am,date:dt,plan:pl,subcat:sc,note:nt});if(sc){const it=(m.items[pl]||[]).find(i=>i.name===sc);if(it)it.dep+=am;}}
+    toast('Ajouté ✓','sg');
+  }
+  cov('ov-tx');sch();rp(cp);
+}
+function cDel(id,type,ds){
+  document.getElementById('ctxt').textContent=`Supprimer "${ds}" ?`;
+  document.getElementById('bconf').onclick=()=>doDel(id,type);ov('ov-conf');
+}
+function doDel(id,type){
+  const m=M();let del=null;
+  if(type==='revenu'){del=JSON.parse(JSON.stringify((m.revenus||[]).find(r=>r.id===id)||{}));m.revenus=m.revenus.filter(r=>r.id!==id);}
+  else{const d=(m.depenses||[]).find(x=>x.id===id);if(d){del=JSON.parse(JSON.stringify(d));if(d.subcat){const it=(m.items[d.plan]||[]).find(i=>i.name===d.subcat);if(it)it.dep=Math.max(0,it.dep-d.amount);}m.depenses=m.depenses.filter(x=>x.id!==id);}}
+  undoD={del,type};cov('ov-conf');sch();rp(cp);
+  toastUndo('Supprimé',()=>{if(undoD){const mm=M();if(undoD.type==='revenu')mm.revenus.push(undoD.del);else{mm.depenses.push(undoD.del);const d=undoD.del;if(d.subcat){const it=(mm.items[d.plan]||[]).find(i=>i.name===d.subcat);if(it)it.dep+=d.amount;}}undoD=null;sch();rp(cp);}});
+}
+
+// ============================================================
+// PLANS PERSO
+// ============================================================
+function rPlans(){document.getElementById('plc').innerHTML=PK.map(k=>planCard(k,M())).join('');}
+function rPS(k){const el=document.getElementById('plc-'+k);if(!el)return;el.innerHTML=planCard(k,M());updSB();}
+function planCard(k,m){
+  const b=bgt(mi,k),d=pDep(mi,k),s=b-d,pct=b>0?Math.min(100,d/b*100):0,rep=gRep(mi,k);
+  const items=m.items[k]||[];
+  const retBtn=k==='epargne'?`<button class="btn bb bsm" onclick="oaRet()">↩ Retrait épargne</button>`:'';
+  return`<div class="card mb4" style="border-left:4px solid ${PC[k].co}">
+    <div class="flex aic jb mb3" style="flex-wrap:wrap;gap:8px">
+      <div style="font-size:15px;font-weight:800">${PC[k].ic} ${PC[k].lb} <span style="color:var(--s4);font-size:12px;font-weight:500">· ${Math.round(gp2(k)*100)}%</span></div>
+      <div class="flex gi2 fw aic"><span class="tsm tmu">Budget : <strong>${f(b)} FCFA</strong></span><span class="bge ${s>=0?'bgg':'bgr'}">${s>=0?'+':''}${f(s)} FCFA</span>${retBtn}</div>
+    </div>
+    <div class="pr" style="background:var(--s1);height:7px;margin-bottom:8px"><div class="prt" style="width:${pct}%;background:${PC[k].co}"></div></div>
+    <div style="font-size:12px;color:var(--s5);margin-bottom:12px">${f(d)} FCFA dépensé · ${pct.toFixed(0)}%${rep>0?` · <span style="color:${PC[k].co}">Report +${f(rep)} FCFA</span>`:''}</div>
+    <div class="scx"><table class="dt">
+      <thead><tr><th>Désignation</th><th style="text-align:right;width:125px">Budget prévu</th><th style="text-align:right;width:125px">Dépensé</th><th style="text-align:right;width:80px">Écart</th><th style="width:30px"></th></tr></thead>
+      <tbody>${items.map(it=>{const e=it.bp-it.dep;return`<tr><td><input style="border:none;background:transparent;font-size:13px;color:var(--s8);width:100%;outline:none;font-family:var(--font)" value="${es(it.name)}" onchange="uIN('${k}','${it.id}',this.value)"/></td><td style="text-align:right"><input type="number" min="0" value="${it.bp||''}" placeholder="0" style="border:1.5px solid var(--s2);border-radius:6px;padding:5px 8px;font-size:13px;width:110px;text-align:right;outline:none;font-family:var(--font)" onchange="uIB('${k}','${it.id}',this.value)"/></td><td style="text-align:right"><input type="number" min="0" value="${it.dep||''}" placeholder="0" style="border:1.5px solid var(--s2);border-radius:6px;padding:5px 8px;font-size:13px;width:110px;text-align:right;outline:none;font-family:var(--font);color:${it.dep>0?PC[k].co:'inherit'}" onchange="uID('${k}','${it.id}',this.value)"/></td><td style="text-align:right;font-weight:700;color:${e>=0?'var(--g)':'var(--r)'}">${it.bp>0||it.dep>0?f(e):'—'}</td><td><button class="bico dl" onclick="cDelIt('${k}','${it.id}','${es(it.name)}')">🗑️</button></td></tr>`;}).join('')}</tbody>
+      <tfoot><tr><td>TOTAL</td><td style="text-align:right">${f(items.reduce((s,i)=>s+i.bp,0))} FCFA</td><td style="text-align:right;color:${PC[k].co}">${f(d)} FCFA</td><td style="text-align:right;color:${s>=0?'var(--g)':'var(--r)'}">${f(s)} FCFA</td><td></td></tr></tfoot>
+    </table></div>
+    <button class="btn bo bsm mt3" onclick="aIt('${k}')">+ Ajouter ligne</button>
+  </div>`;
+}
+function uIN(k,id,v){const i=M().items[k].find(x=>x.id===id);if(i)i.name=v;sch();}
+function uIB(k,id,v){const i=M().items[k].find(x=>x.id===id);if(i)i.bp=parseFloat(v)||0;sch();rp(cp);}
+function uID(k,id,v){const i=M().items[k].find(x=>x.id===id);if(i)i.dep=parseFloat(v)||0;sch();rp(cp);}
+function aIt(k){M().items[k].push({id:uid(),name:'Nouvelle ligne',bp:0,dep:0});sch();rp(cp);}
+function cDelIt(k,id,nm){document.getElementById('ctxt').textContent=`Supprimer "${nm}" ?`;document.getElementById('bconf').onclick=()=>{M().items[k]=M().items[k].filter(i=>i.id!==id);cov('ov-conf');sch();rp(cp);};ov('ov-conf');}
+
+// ============================================================
+// DETTES
+// ============================================================
+function rDettes(){
+  const m=M(),b=bgt(mi,'dette'),rep=gRep(mi,'dette');
+  const tp=(m.dettes||[]).reduce((s,d)=>s+d.paye,0),sol=b-tp;
+  const tDues=(m.dettes||[]).reduce((s,d)=>s+(d.total-d.paye),0);
+  const el=document.getElementById('detc');
+  const sum=`<div class="kg mb4">
+    <div class="kpi" style="border-left:4px solid var(--r)"><div class="kl">Total dues</div><div class="kv" style="color:var(--r)">${f(tDues)}</div><div class="ks">FCFA à rembourser</div></div>
+    <div class="kpi" style="border-left:4px solid var(--am)"><div class="kl">Total contracté</div><div class="kv" style="color:var(--am)">${f((m.dettes||[]).reduce((s,d)=>s+d.total,0))}</div><div class="ks">FCFA</div></div>
+    <div class="kpi" style="border-left:4px solid var(--g)"><div class="kl">Total remboursé</div><div class="kv" style="color:var(--g)">${f(tp)}</div><div class="ks">FCFA payés</div></div>
+    <div class="kpi" style="border-left:4px solid var(--b)"><div class="kl">Budget ce mois</div><div class="kv" style="color:var(--b)">${f(b)}</div><div class="ks">FCFA</div></div>
+    <div class="kpi" style="border-left:4px solid ${sol>=0?'var(--g)':'var(--r)'}"><div class="kl">Solde dispo.</div><div class="kv" style="color:${sol>=0?'var(--g)':'var(--r)'}">${f(sol)}</div><div class="ks">FCFA</div></div>
+    <div class="kpi" style="border-left:4px solid var(--pu)"><div class="kl">Nb. dettes</div><div class="kv" style="color:var(--pu)">${(m.dettes||[]).length}</div><div class="ks">${(m.dettes||[]).filter(d=>d.total-d.paye<=0).length} soldée(s)</div></div>
+  </div>`;
+  if(!(m.dettes||[]).length){el.innerHTML=sum+`<div class="est"><div class="eico">✅</div><p>Aucune dette pour ${MN[mi]}.</p></div>`;return;}
+  el.innerHTML=sum+`<div class="dgrid">${(m.dettes||[]).map(d=>{
+    const rs=d.total-d.paye,pp=d.total>0?Math.min(100,d.paye/d.total*100):0;
+    return`<div class="dc ${pp>=100?'ok':''}">
+      <div class="flex aic jb mb3"><div><div class="dcn">${es(d.nom)}</div><div class="flex gi2 mt2"><span class="bge ${d.type==='nature'?'bga':'bgb'}">${d.type==='nature'?'📦 Nature':'💰 Argent'}</span></div></div>
+      <div class="flex gi2"><button class="bico ed" onclick="oDet('${d.id}')">✏️</button><button class="bico dl" onclick="cDelD('${d.id}','${es(d.nom)}')">🗑️</button></div></div>
+      <div class="dr"><span class="dl2">Montant total</span><span class="dv2">${f(d.total)} FCFA</span></div>
+      <div class="dr"><span class="dl2">Remboursé</span><span class="dv2 tg">${f(d.paye)} FCFA</span></div>
+      <div class="dr"><span class="dl2">Reste dû</span><span class="dv2 tr" style="font-size:15px">${f(rs)} FCFA</span></div>
+      ${d.dlim?`<div class="dr"><span class="dl2">Échéance</span><span class="dv2" style="color:${new Date(d.dlim)<new Date()?'var(--r)':'var(--am)'};">${d.dlim}</span></div>`:''}
+      ${d.mens>0?`<div class="dr"><span class="dl2">Mensualité</span><span class="dv2">${f(d.mens)} FCFA</span></div>`:''}
+      ${d.note?`<div class="txs tmu mt2">📝 ${es(d.note)}</div>`:''}
+      <div class="mt3"><div class="flex jb txs tmu mb3"><span>Progression</span><span>${pp.toFixed(0)}%</span></div>
+      <div class="pr" style="background:var(--s1);height:7px"><div class="prt" style="width:${pp}%;background:${pp>=100?'var(--g)':'var(--r)'}"></div></div></div>
+      ${pp>=100?'<div class="tsm fb tg mt3" style="text-align:center">✅ Soldée !</div>':`<button class="btn bg bsm mt3" style="width:100%;justify-content:center" onclick="oPaie('${d.id}')">💸 Enregistrer paiement</button>`}
+    </div>`;
+  }).join('')}</div>`;
+}
+function oaND(){sv('nd-tp','argent');sv('nd-cr','');sv('nd-mt','');sv('nd-ds','');sv('nd-vl','');sv('nd-dt',td());sv('nd-dl','');sv('nd-mn','0');sv('nd-nt','');document.getElementById('nd-ar').checked=true;eDtId=null;updNDT();ov('ov-nd');}
+function updNDT(){const isN=g('nd-tp')==='nature';document.getElementById('nd-mf').style.display=isN?'none':'block';document.getElementById('nd-nf').style.display=isN?'block':'none';document.getElementById('nd-vf').style.display=isN?'block':'none';document.getElementById('nd-ro').style.display=isN?'none':'flex';}
+async function savND(){
+  const tp=g('nd-tp'),crea=g('nd-cr'),mont=parseFloat(g('nd-mt'))||0,desc=g('nd-ds'),val=parseFloat(g('nd-vl'))||0;
+  const date=g('nd-dt'),dlim=g('nd-dl'),mens=parseFloat(g('nd-mn'))||0,note=g('nd-nt');
+  const addR=document.getElementById('nd-ar')?.checked;
+  if(!crea){toast('Nom du créancier requis','er');return;}
+  if(tp==='argent'&&(!mont||mont<1)){toast('Montant requis','er');return;}
+  if(tp==='nature'&&!desc){toast('Description requise','er');return;}
+  const total=tp==='argent'?mont:val;const m=M();if(!m.dettes)m.dettes=[];
+  m.dettes.push({id:uid(),nom:crea,type:tp,desc:tp==='nature'?desc:'',total,paye:0,dlim,mens,note,hist:[]});
+  if(tp==='argent'&&addR&&mont>0){m.revenus.push({id:uid(),source:'Dette reçue — '+crea,amount:mont,date,note:'Debt: '+note,isDette:true});toast('Dette + '+f(mont)+' FCFA aux revenus ✓','sg');}
+  else toast('Dette enregistrée ✓','sg');
+  cov('ov-nd');sch();gp('dettes');
+}
+function oDet(id){eDtId=id;const d=M().dettes.find(x=>x.id===id);if(!d)return;sv('de-nm',d.nom);sv('de-tp',d.type||'argent');sv('de-ds',d.desc||'');sv('de-tt',d.total);sv('de-py',d.paye);sv('de-dl',d.dlim||'');sv('de-mn',d.mens);sv('de-nt',d.note||'');ov('ov-det');}
+async function savDet(){
+  const nm=g('de-nm'),tp=g('de-tp'),desc=g('de-ds'),tot=parseFloat(g('de-tt'))||0,pay=parseFloat(g('de-py'))||0,dlim=g('de-dl'),men=parseFloat(g('de-mn'))||0,not=g('de-nt');
+  if(!nm||!tot){toast('Nom et montant requis','er');return;}
+  const m=M();if(!m.dettes)m.dettes=[];
+  if(eDtId){const d=m.dettes.find(x=>x.id===eDtId);if(d)Object.assign(d,{nom:nm,type:tp,desc,total:tot,paye:pay,dlim,mens:men,note:not});}
+  else m.dettes.push({id:uid(),nom:nm,type:tp,desc,total:tot,paye:pay,dlim,mens:men,note:not,hist:[]});
+  cov('ov-det');sch();rDettes();toast('Créancier enregistré ✓','sg');
+}
+function cDelD(id,nm){document.getElementById('ctxt').textContent=`Supprimer la dette "${nm}" ?`;document.getElementById('bconf').onclick=()=>{M().dettes=M().dettes.filter(d=>d.id!==id);cov('ov-conf');sch();rDettes();};ov('ov-conf');}
+function oPaie(id){pDtId=id;const d=M().dettes.find(x=>x.id===id);if(!d)return;document.getElementById('pinfo').innerHTML=`<strong>${es(d.nom)}</strong> — Reste : <strong style="color:var(--r)">${f(d.total-d.paye)} FCFA</strong>`;sv('pamt',d.mens||'');sv('pdat',td());ov('ov-paie');}
+async function savPaie(){
+  const am=parseFloat(g('pamt'))||0,dt=g('pdat');if(!am){toast('Montant requis','er');return;}
+  const d=M().dettes.find(x=>x.id===pDtId);if(!d)return;
+  d.paye=Math.min(d.total,d.paye+am);d.hist=d.hist||[];d.hist.push({date:dt,amount:am});
+  M().depenses.push({id:uid(),desc:'Remboursement — '+d.nom,amount:am,date:dt,plan:'dette',subcat:d.nom,isDettePaie:true});
+  cov('ov-paie');sch();rDettes();toast('Paiement '+f(am)+' FCFA enregistré ✓','sg');
+}
+
+// ============================================================
+// RETRAIT ÉPARGNE
+// ============================================================
+function oaRet(){
+  const sol=bgt(mi,'epargne')-pDep(mi,'epargne');
+  document.getElementById('ret-info').innerHTML='💳 Épargne disponible ce mois : <strong>'+f(Math.max(0,sol))+' FCFA</strong>';
+  sv('ret-am','');sv('ret-dt',td());sv('ret-mo','');ov('ov-ret');
+}
+async function savRet(){
+  const am=parseFloat(g('ret-am'))||0,date=g('ret-dt'),motif=g('ret-mo')||'Retrait épargne';
+  if(!am||am<1){toast('Montant requis','er');return;}
+  const sol=bgt(mi,'epargne')-pDep(mi,'epargne');
+  if(am>Math.max(0,sol)){toast('Dépasse l\'épargne disponible ('+f(Math.max(0,sol))+' FCFA)','er');return;}
+  const m=M();
+  m.revenus.push({id:uid(),source:'Retrait épargne — '+motif,amount:am,date,isRet:true});
+  m.depenses.push({id:uid(),desc:'Retrait épargne — '+motif,amount:am,date,plan:'epargne',isRet:true});
+  cov('ov-ret');sch();toast('Retrait '+f(am)+' FCFA ajouté aux revenus ✓','sg');rp(cp);
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function sePer(el,v){exPer=v;document.querySelectorAll('#efp .ec').forEach(c=>c.classList.remove('on'));el.classList.add('on');rExp();}
+function sePlan(el,v){exPl=v;document.querySelectorAll('#efpl .ec').forEach(c=>c.classList.remove('on'));el.classList.add('on');rExp();}
+function exRows(){
+  let ms=[];
+  if(exPer==='mois')ms=[mi];else if(exPer==='3mois')ms=Array.from({length:3},(_,i)=>Math.max(0,mi-2+i));
+  else if(exPer==='6mois')ms=Array.from({length:6},(_,i)=>Math.max(0,mi-5+i));else ms=Array.from({length:7},(_,i)=>i);
+  ms=[...new Set(ms)].filter(x=>x>=0&&x<7);
+  const rows=[];
+  ms.forEach(x=>{
+    const m=S.mois[x];
+    if(exPl==='all')(m.revenus||[]).forEach(r=>rows.push({Date:r.date,Mois:MN[x],Type:'Revenu',Montant:r.amount,Plan:'—',Libellé:r.source||'',Note:r.note||''}));
+    (m.depenses||[]).filter(d=>exPl==='all'||d.plan===exPl).forEach(d=>rows.push({Date:d.date,Mois:MN[x],Type:'Dépense',Montant:-d.amount,Plan:PC[d.plan]?.lb||d.plan,Libellé:d.desc||'',Note:d.note||''}));
+  });
+  return rows.sort((a,b)=>(b.Date||'').localeCompare(a.Date||''));
+}
+function rExp(){
+  const rows=exRows(),el=document.getElementById('exprev');
+  if(!rows.length){el.innerHTML='<div class="est"><div class="eico">📋</div><p>Aucune donnée.</p></div>';return;}
+  const tot=rows.reduce((s,r)=>s+r.Montant,0);
+  el.innerHTML=`<div class="tsm tmu mb3">${rows.length} transactions · Solde : <strong style="color:${tot>=0?'var(--g)':'var(--r)'}">${f(tot)} FCFA</strong></div>
+  <div class="scx"><table class="dt"><thead><tr><th>Date</th><th>Type</th><th>Libellé</th><th>Plan</th><th style="text-align:right">Montant</th></tr></thead>
+  <tbody>${rows.slice(0,10).map(r=>`<tr><td>${r.Date||''}</td><td><span class="bge ${r.Type==='Revenu'?'bgg':'bgr'}">${r.Type}</span></td><td>${es(r.Libellé)}</td><td class="tmu">${es(r.Plan)}</td><td style="text-align:right;font-weight:700;color:${r.Montant>=0?'var(--g)':'var(--r)'}">${f(r.Montant)}</td></tr>`).join('')}</tbody></table></div>
+  ${rows.length>10?`<div class="txs tmu mt2">… et ${rows.length-10} autres dans le fichier</div>`:''}`;
+}
+function doExp(){
+  const rows=exRows();if(!rows.length){toast('Aucune donnée','er');return;}
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Transactions');
+  const sr=MN.map((_,i)=>{const rv=tRev(i),dp=PK.reduce((s,k)=>s+pDep(i,k),0);return{Mois:MN[i],Revenus:rv,Dépenses:dp,Solde:rv-dp,...Object.fromEntries(PK.map(k=>[PC[k].lb,pDep(i,k)]))};});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sr),'Synthèse');
+  XLSX.writeFile(wb,'XiifXamXam_'+td()+'.xlsx');toast('Export téléchargé ✓','sg');
+}
+
+// ============================================================
+// PARAM
+// ============================================================
+function rParam(){
+  const tot=Math.round(PK.reduce((s,k)=>s+gp2(k)*100,0));const ok=tot===100;
+  document.getElementById('parc').innerHTML=`
+  ${PK.map(k=>{const p=Math.round(gp2(k)*100);return`<div class="pp"><div class="pph"><div class="ppn" style="color:${PC[k].co}">${PC[k].ic} ${PC[k].lb}</div><div class="flex aic gi2"><input class="ppi" id="pp-${k}" type="number" min="0" max="100" value="${p}" oninput="spR('${k}',this.value)" style="border-color:${PC[k].co}33"/><span class="tmu tsm">%</span></div></div><input type="range" min="0" max="100" value="${p}" id="pr-${k}" style="accent-color:${PC[k].co}" oninput="spI('${k}',this.value)"/><div class="txs tmu mt2">Pour 1 000 000 FCFA → <strong style="color:${PC[k].co}">${f(gp2(k)*1e6)} FCFA</strong></div></div>`;}).join('')}
+  <div id="ptot" style="border-radius:var(--r12);padding:13px 16px;background:${ok?'var(--gl)':'var(--rl)'};border:1.5px solid ${ok?'var(--gm)':'var(--rm)'};margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:13px;font-weight:700;color:${ok?'var(--g)':'var(--r)'}">Total : <span id="ptv">${tot}</span>%</span>
+    <span style="font-size:12px;font-weight:700;color:${ok?'var(--g)':'var(--r)'}" id="pst">${ok?'✅ Parfait !':'⚠️ Doit être 100%'}</span>
+  </div>
+  <div class="flex gi2 fw"><button class="btn bg" onclick="savPar()">💾 Enregistrer</button><button class="btn bo" onclick="resPar()">↺ Réinitialiser</button></div>`;
+}
+function spR(k,v){const r=document.getElementById('pr-'+k);if(r)r.value=v;upPT();}
+function spI(k,v){const i=document.getElementById('pp-'+k);if(i)i.value=v;upPT();}
+function upPT(){
+  const tot=PK.reduce((s,k)=>s+(parseInt(document.getElementById('pp-'+k)?.value)||0),0);const ok=tot===100;
+  const tb=document.getElementById('ptot'),tv=document.getElementById('ptv'),st=document.getElementById('pst');
+  if(tv)tv.textContent=tot;if(st){st.textContent=ok?'✅ Parfait !':'⚠️ Doit être 100%';st.style.color=ok?'var(--g)':'var(--r)';}
+  if(tb){tb.style.background=ok?'var(--gl)':'var(--rl)';tb.style.borderColor=ok?'var(--gm)':'var(--rm)';}
+}
+function savPar(){
+  const tot=PK.reduce((s,k)=>s+(parseInt(document.getElementById('pp-'+k)?.value)||0),0);
+  if(tot!==100){toast('Le total doit être 100%','er');return;}
+  if(!S.par)S.par={};PK.forEach(k=>{S.par[k]=(parseInt(document.getElementById('pp-'+k)?.value)||0)/100;});
+  sch();toast('Paramètres enregistrés ✓','sg');rParam();updSB();
+}
+function resPar(){if(!S.par)S.par={};PK.forEach(k=>{S.par[k]=DP[k];});sch();toast('Réinitialisé ✓','sg');rParam();updSB();}
+function updSB(){if(!S)return;const map={don:'sb-don',epargne:'sb-ep',invest:'sb-inv',dette:'sb-det',conso:'sb-con'};PK.forEach(k=>{const el=document.getElementById(map[k]);if(el)el.textContent=Math.round(gp2(k)*100)+'%';});}
+
+// ============================================================
+// BUSINESS - HELPERS
+// ============================================================
+function updBSel(){
+  const sel=document.getElementById('bsel');if(!sel)return;
+  sel.innerHTML=(S.businesses||[]).map(b=>`<option value="${b.id}"${b.id===curBizId?' selected':''}>${BT[b.type]||'📦'} ${es(b.nom)}</option>`).join('');
+  if(!S.businesses?.length)sel.innerHTML='<option value="">— Aucun business —</option>';
+}
+function chBiz(id){curBizId=id;rpB(curBizPg);}
+function chMoisB(v){bmi=parseInt(v);rpB(curBizPg);}
+function getBi(){return(S.businesses||[]).findIndex(b=>b.id===curBizId);}
+function gpB(p){
+  curBizPg=p;
+  document.querySelectorAll('.pg').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('[data-bp]').forEach(e=>e.classList.remove('on'));
+  document.getElementById('pg-'+p)?.classList.add('on');
+  document.querySelector(`[data-bp="${p}"]`)?.classList.add('on');
+  if(window.innerWidth<=768)document.getElementById('sbb')?.classList.remove('mob');
+  rpB(p);
+}
+function rpB(p){
+  if(!S)return;
+  if(p==='biz-db')rBDB();else if(p==='biz-cmd')rBCmd();else if(p==='biz-charges')rBChg();
+  else if(p==='biz-fou')rBFou();else if(p==='biz-sal')rBSal();else if(p==='biz-set')rBSet();
+}
+
+// BIZ CALC HELPERS
+function bCA(bi,i){const b=S.businesses[bi];if(!b)return 0;return(b.mois[i]?.commandes||[]).filter(c=>c.statut==='termine').reduce((s,c)=>s+c.px,0);}
+function bCV(bi,i){const b=S.businesses[bi];if(!b)return 0;return(b.mois[i]?.commandes||[]).filter(c=>c.statut!=='annule').reduce((s,c)=>s+(c.cvs||[]).reduce((cs,cv)=>cs+cv.mt,0),0);}
+function bCF(bi,i){const b=S.businesses[bi];if(!b)return 0;return(b.mois[i]?.charges||[]).reduce((s,c)=>{if(c.fr==='mensuel')return s+c.mt;if(c.fr==='trimestriel')return s+c.mt/3;if(c.fr==='annuel')return s+c.mt/12;return s+c.mt;},0);}
+function bBen(bi,i){return bCA(bi,i)-bCV(bi,i)-bCF(bi,i);}
+function bVers(bi,i){const b=S.businesses[bi];if(!b)return 0;return(b.mois[i]?.versements||[]).reduce((s,v)=>s+v.mt,0);}
+
+// ============================================================
+// BIZ DASHBOARD
+// ============================================================
+function rBDB(){
+  const el=document.getElementById('bdb');
+  if(!S.businesses?.length){el.innerHTML=`<div class="est"><div class="eico">🏢</div><p style="font-size:15px;font-weight:700;">Aucun business configuré</p><p class="txs tmu mt2">Créez votre premier business pour commencer.</p><button class="btn bcy mt4" onclick="gpB('biz-set')">🏢 Créer mon premier business</button></div>`;return;}
+  const bi=getBi();if(bi<0){el.innerHTML='<p class="tmu">Sélectionnez un business.</p>';return;}
+  const b=S.businesses[bi];
+  const ca=bCA(bi,bmi),cv=bCV(bi,bmi),cf=bCF(bi,bmi),ben=bBen(bi,bmi),vers=bVers(bi,bmi);
+  const marge=ca>0?((ben/ca)*100).toFixed(1):0;
+  const nbCmd=(b.mois[bmi]?.commandes||[]).length;
+  const nbEC=(b.mois[bmi]?.commandes||[]).filter(c=>c.statut==='en-cours').length;
+  el.innerHTML=`
+    <div class="biz-hdr">
+      <div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${BT[b.type]||'📦'} ${es(b.nom)}</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:4px;">Dashboard — ${MN[bmi]}</div>
+      <div style="font-size:13px;color:#94A3B8;">${es(b.desc||'')}</div>
+    </div>
+    <div class="kg">
+      <div class="kpi" style="border-left:4px solid var(--cy)"><div class="kl">Chiffre d'affaires</div><div class="kv" style="color:var(--cy)">${f(ca)}</div><div class="ks">FCFA (cmds terminées)</div></div>
+      <div class="kpi" style="border-left:4px solid var(--r)"><div class="kl">Coûts variables</div><div class="kv" style="color:var(--r)">${f(cv)}</div><div class="ks">FCFA matières premières</div></div>
+      <div class="kpi" style="border-left:4px solid var(--am)"><div class="kl">Charges fixes</div><div class="kv" style="color:var(--am)">${f(cf)}</div><div class="ks">FCFA ce mois</div></div>
+      <div class="kpi" style="border-left:4px solid ${ben>=0?'var(--g)':'var(--r)'}"><div class="kl">Bénéfice net</div><div class="kv" style="color:${ben>=0?'var(--g)':'var(--r)'}">${f(ben)}</div><div class="ks">FCFA · Marge ${marge}%</div></div>
+      <div class="kpi" style="border-left:4px solid var(--pu)"><div class="kl">Salaire versé</div><div class="kv" style="color:var(--pu)">${f(vers)}</div><div class="ks">FCFA · Prévu : ${f(b.salPrev||0)}</div></div>
+      <div class="kpi" style="border-left:4px solid var(--b)"><div class="kl">Commandes</div><div class="kv" style="color:var(--b)">${nbCmd}</div><div class="ks">${nbEC} en cours</div></div>
+    </div>
+    <div class="sal-bn">
+      <div><div class="sl">💰 Salaire dirigeant — ${MN[bmi]}</div><div class="sa">${f(vers)} FCFA versés</div><div class="ss">Prévu : ${f(b.salPrev||0)} FCFA · Bénéfice net : ${f(ben)} FCFA</div></div>
+      <button class="sal-bt" onclick="oSal()">💸 Se verser son salaire →</button>
+    </div>
+    <div class="card">
+      <div class="flex aic jb mb3"><div style="font-size:14px;font-weight:700;">Commandes récentes</div><button class="btn bo bsm" onclick="gpB('biz-cmd')">Voir tout →</button></div>
+      ${renderCmds((b.mois[bmi]?.commandes||[]).slice(-5).reverse(),false)}
+    </div>`;
+}
+
+// ============================================================
+// BIZ COMMANDES
+// ============================================================
+let cmdTab='tout';
+function sttC(t){cmdTab=t;['tout','en-cours','termine','annule'].forEach(x=>{document.getElementById('ct-'+x)?.classList.toggle('on',x===t);});rBCmd();}
+function rBCmd(){
+  const bi=getBi();if(bi<0){document.getElementById('cmdlist').innerHTML='<div class="est"><div class="eico">📋</div><p>Sélectionnez un business.</p></div>';return;}
+  const b=S.businesses[bi];
+  let cmds=(b.mois[bmi]?.commandes||[]).slice().reverse();
+  if(cmdTab!=='tout')cmds=cmds.filter(c=>c.statut===cmdTab);
+  document.getElementById('cmdlist').innerHTML=renderCmds(cmds,true);
+}
+function renderCmds(cmds,ac){
+  if(!cmds.length)return'<div class="est"><div class="eico">📋</div><p>Aucune commande.</p></div>';
+  const smap={'en-cours':'⏳ En cours','termine':'✅ Terminée','annule':'❌ Annulée'};
+  return cmds.map(c=>{
+    const cv=(c.cvs||[]).reduce((s,v)=>s+v.mt,0);
+    const ben=c.statut==='termine'?c.px-cv:null;
+    const btns=ac?`<div class="flex gi2 mt3"><button class="btn bo bsm" onclick="oEditCmd('${c.id}')">✏️ Modifier</button><button class="btn br2 bsm" onclick="cDelCmd('${c.id}','${es(c.cl)}')">🗑️</button></div>`:'';
+    return`<div class="cmd-card">
+      <div class="flex aic jb"><div style="flex:1;"><div class="cmd-cl">👤 ${es(c.cl)}</div><div class="cmd-ds">${es(c.ds)}</div><div class="txs tmu mt2">📅 ${c.dt||''} ${c.dlv?'→ livraison : '+c.dlv:''}</div></div>
+      <span class="cmd-st ${c.statut||'en-cours'}">${smap[c.statut]||c.statut}</span></div>
+      <div class="cmd-fin">
+        <div class="cfi"><div class="cfl">Prix vente</div><div class="cfv" style="color:var(--cy)">${f(c.px)} F</div></div>
+        <div class="cfi"><div class="cfl">Coûts var.</div><div class="cfv" style="color:var(--r)">${f(cv)} F</div></div>
+        <div class="cfi"><div class="cfl">Bénéfice</div><div class="cfv" style="color:${ben===null?'var(--s4)':ben>=0?'var(--g)':'var(--r)'}">${ben===null?'—':f(ben)+' F'}</div></div>
+      </div>
+      ${(c.cvs||[]).length?`<div class="mt2 txs tmu">Matières : ${(c.cvs||[]).map(cv=>`${es(cv.nm)} (${f(cv.mt)} F)`).join(' · ')}</div>`:''}
+      ${c.nt?`<div class="txs tmu mt2">📝 ${es(c.nt)}</div>`:''}${btns}
+    </div>`;
+  }).join('');
+}
+function oNewCmd(){
+  eCmdId=null;cvLines=[];
+  document.getElementById('cmd-mot').textContent='📋 Nouvelle commande';
+  sv('cmd-cl','');sv('cmd-ds','');sv('cmd-dt',td());sv('cmd-dl','');sv('cmd-px','0');sv('cmd-st','en-cours');sv('cmd-nt','');
+  document.getElementById('cv-lines').innerHTML='';document.getElementById('cmd-calc').style.display='none';
+  addCvLine();document.getElementById('bscmd').textContent='Enregistrer la commande';
+  ov('ov-cmd');
+}
+function oEditCmd(id){
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];
+  const c=(b.mois[bmi]?.commandes||[]).find(x=>x.id===id);if(!c)return;
+  eCmdId=id;cvLines=JSON.parse(JSON.stringify(c.cvs||[]));
+  document.getElementById('cmd-mot').textContent='✏️ Modifier la commande';
+  sv('cmd-cl',c.cl);sv('cmd-ds',c.ds);sv('cmd-dt',c.dt||td());sv('cmd-dl',c.dlv||'');sv('cmd-px',c.px);sv('cmd-st',c.statut||'en-cours');sv('cmd-nt',c.nt||'');
+  renderCvLines();updCmdCalc();document.getElementById('bscmd').textContent='Mettre à jour';
+  ov('ov-cmd');
+}
+function addCvLine(){cvLines.push({id:uid(),nm:'',mt:0});renderCvLines();}
+function renderCvLines(){
+  document.getElementById('cv-lines').innerHTML=cvLines.map((cv,i)=>`
+    <div style="display:flex;gap:7px;align-items:center;">
+      <input style="flex:1;border:1.5px solid var(--s2);border-radius:var(--r8);padding:8px 10px;font-size:13px;outline:none;font-family:var(--font);" placeholder="Ex: Tee-shirts blancs, Encre…" value="${es(cv.nm)}" oninput="cvLines[${i}].nm=this.value;updCmdCalc()"/>
+      <input type="number" min="0" style="width:110px;border:1.5px solid var(--s2);border-radius:var(--r8);padding:8px 10px;font-size:13px;outline:none;font-family:var(--font);text-align:right;" placeholder="Montant F" value="${cv.mt||''}" oninput="cvLines[${i}].mt=parseFloat(this.value)||0;updCmdCalc()"/>
+      <button class="bico dl" onclick="cvLines.splice(${i},1);renderCvLines();updCmdCalc()">🗑️</button>
+    </div>`).join('');
+}
+function updCmdCalc(){
+  const px=parseFloat(g('cmd-px'))||0,tCV=cvLines.reduce((s,cv)=>s+cv.mt,0),ben=px-tCV;
+  const box=document.getElementById('cmd-calc'),txt=document.getElementById('cmd-calc-txt');
+  if(px>0||tCV>0){box.style.display='flex';txt.innerHTML=`<strong>Récapitulatif :</strong><br>Prix de vente : <strong>${f(px)} FCFA</strong> · Coûts variables : <strong style="color:var(--r)">${f(tCV)} FCFA</strong><br>Bénéfice estimé : <strong style="color:${ben>=0?'var(--g)':'var(--r)'}">${f(ben)} FCFA</strong>${px>0?` (marge ${(ben/px*100).toFixed(1)}%)`:''}`;
+  }else box.style.display='none';
+}
+async function savCmd(){
+  const cl=g('cmd-cl'),ds=g('cmd-ds'),dt=g('cmd-dt'),dlv=g('cmd-dl'),px=parseFloat(g('cmd-px'))||0,statut=g('cmd-st'),nt=g('cmd-nt');
+  if(!cl){toast('Nom du client requis','er');return;}if(!ds){toast('Description requise','er');return;}
+  const bi=getBi();if(bi<0){toast('Sélectionnez un business','er');return;}
+  const b=S.businesses[bi];if(!b.mois[bmi])b.mois[bmi]=dBM();
+  const cvs=cvLines.filter(c=>c.nm||c.mt>0).map(c=>({id:c.id||uid(),nm:c.nm,mt:c.mt||0}));
+  if(eCmdId){const c=(b.mois[bmi].commandes||[]).find(x=>x.id===eCmdId);if(c)Object.assign(c,{cl,ds,dt,dlv,px,statut,nt,cvs});toast('Commande modifiée ✓','sg');}
+  else{if(!b.mois[bmi].commandes)b.mois[bmi].commandes=[];b.mois[bmi].commandes.push({id:uid(),cl,ds,dt,dlv,px,statut,nt,cvs});toast('Commande ajoutée ✓','sg');}
+  cov('ov-cmd');sch();rpB(curBizPg);
+}
+function cDelCmd(id,cl){
+  document.getElementById('ctxt').textContent=`Supprimer la commande de "${cl}" ?`;
+  document.getElementById('bconf').onclick=()=>{const bi=getBi();if(bi<0)return;S.businesses[bi].mois[bmi].commandes=S.businesses[bi].mois[bmi].commandes.filter(c=>c.id!==id);cov('ov-conf');sch();rpB(curBizPg);};ov('ov-conf');
+}
+
+// ============================================================
+// BIZ CHARGES
+// ============================================================
+function rBChg(){
+  const el=document.getElementById('chglist');const bi=getBi();
+  if(bi<0){el.innerHTML='<div class="est"><div class="eico">💸</div><p>Sélectionnez un business.</p></div>';return;}
+  const b=S.businesses[bi];const charges=b.mois[bmi]?.charges||[];const total=bCF(bi,bmi);
+  if(!charges.length){el.innerHTML=`<div class="ib ib-cy mb4"><span>ℹ️</span><span>Les charges fixes (loyer, électricité, salaires…) sont les coûts récurrents de votre business indépendamment des commandes.</span></div><div class="est"><div class="eico">💸</div><p>Aucune charge fixe pour ${MN[bmi]}.</p><button class="btn bcy mt3" onclick="oNewCharge()">+ Ajouter la première charge</button></div>`;return;}
+  el.innerHTML=`<div class="kpi mb4" style="border-left:4px solid var(--am);max-width:280px;"><div class="kl">Total charges fixes ce mois</div><div class="kv" style="color:var(--am)">${f(total)}</div><div class="ks">FCFA</div></div>
+  <div class="chg-g">${charges.map(c=>`<div class="chg-i">
+    <div class="flex aic jb"><div><div style="font-size:13px;font-weight:700;">${CI[c.ct]||'📋'} ${es(c.nm)}</div><div class="txs tmu mt2"><span class="bge bga">${c.fr||'mensuel'}</span></div></div>
+    <div class="flex gi2"><button class="bico ed" onclick="oEditChg('${c.id}')">✏️</button><button class="bico dl" onclick="cDelChg('${c.id}','${es(c.nm)}')">🗑️</button></div></div>
+    <div style="font-size:18px;font-weight:800;color:var(--r);margin-top:4px;">${f(c.mt)} FCFA</div>
+    ${c.nt?`<div class="txs tmu mt2">${es(c.nt)}</div>`:''}
+  </div>`).join('')}</div>`;
+}
+function oNewCharge(){eChgId=null;document.getElementById('chg-mot').textContent='💸 Nouvelle charge fixe';sv('chg-nm','');sv('chg-am','');sv('chg-ct','loyer');sv('chg-fr','mensuel');sv('chg-nt','');document.getElementById('bschg').textContent='Enregistrer';ov('ov-chg');}
+function oEditChg(id){const bi=getBi();if(bi<0)return;const b=S.businesses[bi];const c=(b.mois[bmi]?.charges||[]).find(x=>x.id===id);if(!c)return;eChgId=id;document.getElementById('chg-mot').textContent='✏️ Modifier la charge';sv('chg-nm',c.nm);sv('chg-am',c.mt);sv('chg-ct',c.ct);sv('chg-fr',c.fr);sv('chg-nt',c.nt||'');document.getElementById('bschg').textContent='Mettre à jour';ov('ov-chg');}
+async function savChg(){
+  const nm=g('chg-nm'),amt=parseFloat(g('chg-am'))||0,ct=g('chg-ct'),fr=g('chg-fr'),nt=g('chg-nt');
+  if(!nm){toast('Désignation requise','er');return;}if(!amt){toast('Montant requis','er');return;}
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];
+  if(!b.mois[bmi])b.mois[bmi]=dBM();if(!b.mois[bmi].charges)b.mois[bmi].charges=[];
+  if(eChgId){const c=b.mois[bmi].charges.find(x=>x.id===eChgId);if(c)Object.assign(c,{nm,mt:amt,ct,fr,nt});}
+  else b.mois[bmi].charges.push({id:uid(),nm,mt:amt,ct,fr,nt});
+  cov('ov-chg');sch();rpB(curBizPg);toast('Charge enregistrée ✓','sg');
+}
+function cDelChg(id,nm){document.getElementById('ctxt').textContent=`Supprimer "${nm}" ?`;document.getElementById('bconf').onclick=()=>{const bi=getBi();if(bi<0)return;S.businesses[bi].mois[bmi].charges=S.businesses[bi].mois[bmi].charges.filter(c=>c.id!==id);cov('ov-conf');sch();rpB(curBizPg);};ov('ov-conf');}
+
+// ============================================================
+// BIZ FOURNISSEURS
+// ============================================================
+function rBFou(){
+  const el=document.getElementById('foulist');const bi=getBi();
+  if(bi<0){el.innerHTML='<div class="est"><div class="eico">🏭</div><p>Sélectionnez un business.</p></div>';return;}
+  const b=S.businesses[bi];const fous=b.fournisseurs||[];
+  if(!fous.length){el.innerHTML=`<div class="ib ib-cy mb4"><span>ℹ️</span><span>Gérez ici vos fournisseurs de matières premières et stocks. Ils seront disponibles dans les coûts variables de vos commandes.</span></div><div class="est"><div class="eico">🏭</div><p>Aucun fournisseur.</p><button class="btn bpk mt3" onclick="oNewFou()">+ Ajouter le premier fournisseur</button></div>`;return;}
+  const total=fous.reduce((s,f)=>s+(f.ac||0),0);
+  el.innerHTML=`<div class="kpi mb4" style="border-left:4px solid var(--pk);max-width:280px;"><div class="kl">Total achats (derniers)</div><div class="kv" style="color:var(--pk)">${f(total)}</div><div class="ks">FCFA</div></div>
+  <div class="fou-g">${fous.map(fo=>`<div class="fou-c">
+    <div class="flex aic jb"><div><div style="font-size:14px;font-weight:800;">${es(fo.nm)}</div><div class="txs tmu mt2">📦 ${es(fo.ct||'')}</div></div>
+    <div class="flex gi2"><button class="bico ed" onclick="oEditFou('${fo.id}')">✏️</button><button class="bico dl" onclick="cDelFou('${fo.id}','${es(fo.nm)}')">🗑️</button></div></div>
+    ${fo.tl?`<div class="txs tmu mt2">📞 ${es(fo.tl)}</div>`:''}
+    <div style="font-size:13px;font-weight:700;color:var(--am);margin-top:6px;">Dernier achat : ${f(fo.ac||0)} FCFA ${fo.dt?'· '+fo.dt:''}</div>
+    ${fo.nt?`<div class="txs tmu mt2">📝 ${es(fo.nt)}</div>`:''}
+  </div>`).join('')}</div>`;
+}
+function oNewFou(){eFouId=null;document.getElementById('fou-mot').textContent='🏭 Nouveau fournisseur';sv('fou-nm','');sv('fou-ct','');sv('fou-tl','');sv('fou-ac','0');sv('fou-dt',td());sv('fou-nt','');document.getElementById('bsfou').textContent='Enregistrer';ov('ov-fou');}
+function oEditFou(id){const bi=getBi();if(bi<0)return;const b=S.businesses[bi];const fo=(b.fournisseurs||[]).find(x=>x.id===id);if(!fo)return;eFouId=id;document.getElementById('fou-mot').textContent='✏️ Modifier le fournisseur';sv('fou-nm',fo.nm);sv('fou-ct',fo.ct||'');sv('fou-tl',fo.tl||'');sv('fou-ac',fo.ac||0);sv('fou-dt',fo.dt||td());sv('fou-nt',fo.nt||'');document.getElementById('bsfou').textContent='Mettre à jour';ov('ov-fou');}
+async function savFou(){
+  const nm=g('fou-nm'),ct=g('fou-ct'),tl=g('fou-tl'),ac=parseFloat(g('fou-ac'))||0,dt=g('fou-dt'),nt=g('fou-nt');
+  if(!nm){toast('Nom du fournisseur requis','er');return;}
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];if(!b.fournisseurs)b.fournisseurs=[];
+  if(eFouId){const fo=b.fournisseurs.find(x=>x.id===eFouId);if(fo)Object.assign(fo,{nm,ct,tl,ac,dt,nt});}
+  else b.fournisseurs.push({id:uid(),nm,ct,tl,ac,dt,nt});
+  cov('ov-fou');sch();rpB(curBizPg);toast('Fournisseur enregistré ✓','sg');
+}
+function cDelFou(id,nm){document.getElementById('ctxt').textContent=`Supprimer "${nm}" ?`;document.getElementById('bconf').onclick=()=>{const bi=getBi();if(bi<0)return;S.businesses[bi].fournisseurs=S.businesses[bi].fournisseurs.filter(f=>f.id!==id);cov('ov-conf');sch();rpB(curBizPg);};ov('ov-conf');}
+
+// ============================================================
+// BIZ SALAIRE
+// ============================================================
+function rBSal(){
+  const el=document.getElementById('salc');const bi=getBi();
+  if(bi<0){el.innerHTML='<div class="est"><div class="eico">💰</div><p>Sélectionnez un business.</p></div>';return;}
+  const b=S.businesses[bi];const ben=bBen(bi,bmi),vers=bVers(bi,bmi);
+  const vlist=b.mois[bmi]?.versements||[];
+  const hist=vlist.length?vlist.slice().reverse().map(v=>`
+    <div class="vi"><div class="vico">💸</div>
+    <div style="flex:1;"><div style="font-size:14px;font-weight:700;">${f(v.mt)} FCFA</div>
+    <div class="txs tmu">${v.dt||''} · ${es(v.nt||'Salaire dirigeant')}</div>
+    <div class="txs mt2"><span class="bge bgg">→ Ajouté aux revenus personnels (${MN[mi]})</span></div></div>
+    <button class="bico dl" onclick="cDelVers('${v.id}')">🗑️</button></div>`).join(''):'<div class="est"><div class="eico">💰</div><p>Aucun versement ce mois.</p></div>';
+  el.innerHTML=`
+    <div class="sal-bn">
+      <div><div class="sl">💰 Salaire dirigeant — ${MN[bmi]}</div><div class="sa">${f(vers)} FCFA versés</div><div class="ss">Bénéfice net : ${f(ben)} FCFA · Salaire prévu : ${f(b.salPrev||0)} FCFA/mois</div></div>
+      <button class="sal-bt" onclick="oSal()">💸 Se verser son salaire →</button>
+    </div>
+    <div class="card mb4">
+      <div class="flex aic jb mb3"><div style="font-size:14px;font-weight:700;">Paramètre salaire</div><button class="btn bo bsm" onclick="editSalPrev()">✏️ Modifier</button></div>
+      <div class="flex gi3 fw">
+        <div class="kpi f1" style="border-left:4px solid var(--cy);min-width:120px;"><div class="kl">Salaire prévu/mois</div><div class="kv" style="color:var(--cy)">${f(b.salPrev||0)}</div><div class="ks">FCFA</div></div>
+        <div class="kpi f1" style="border-left:4px solid ${ben>=0?'var(--g)':'var(--r)'};min-width:120px;"><div class="kl">Bénéfice net dispo.</div><div class="kv" style="color:${ben>=0?'var(--g)':'var(--r)'}">${f(ben)}</div><div class="ks">FCFA</div></div>
+        <div class="kpi f1" style="border-left:4px solid var(--pu);min-width:120px;"><div class="kl">Déjà versé</div><div class="kv" style="color:var(--pu)">${f(vers)}</div><div class="ks">FCFA ce mois</div></div>
+      </div>
+    </div>
+    <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px;">Historique des versements — ${MN[bmi]}</div>${hist}</div>`;
+}
+function oSal(){
+  const bi=getBi();if(bi<0){toast('Sélectionnez un business','er');return;}
+  const b=S.businesses[bi];const ben=bBen(bi,bmi),vers=bVers(bi,bmi);
+  document.getElementById('sal-inf').innerHTML=`<div><strong>💰 ${es(b.nom)}</strong> — ${MN[bmi]}</div><div style="font-size:12px;margin-top:4px;">Bénéfice net : <strong style="color:var(--g)">${f(ben)} FCFA</strong> · Déjà versé : <strong>${f(vers)} FCFA</strong></div><div style="font-size:12px;">Salaire prévu : <strong>${f(b.salPrev||0)} FCFA/mois</strong></div>`;
+  sv('sal-am',Math.max(0,Math.min(b.salPrev||0,Math.max(0,ben))));
+  sv('sal-dt',td());sv('sal-nt','Salaire dirigeant — '+MN[bmi]);
+  document.getElementById('sal-calc').innerHTML=`Ce montant sera automatiquement ajouté à vos <strong>revenus personnels du mois ${MN[mi]}</strong> et réparti dans vos 5 plans (Don, Épargne, Investissement, Dettes, Consommation).`;
+  ov('ov-sal');
+}
+function editSalPrev(){const bi=getBi();if(bi<0)return;const b=S.businesses[bi];const nv=prompt('Nouveau salaire prévu par mois (FCFA) :',b.salPrev||0);if(nv===null)return;b.salPrev=parseFloat(nv)||0;sch();rpB(curBizPg);toast('Salaire prévu mis à jour ✓','sg');}
+async function savSal(){
+  const amt=parseFloat(g('sal-am'))||0,dt=g('sal-dt'),nt=g('sal-nt');
+  if(!amt||amt<1){toast('Montant requis','er');return;}
+  const bi=getBi();if(bi<0)return;const b=S.businesses[bi];
+  if(!b.mois[bmi])b.mois[bmi]=dBM();if(!b.mois[bmi].versements)b.mois[bmi].versements=[];
+  b.mois[bmi].versements.push({id:uid(),mt:amt,dt,nt});
+  // Alimente automatiquement les revenus personnels
+  M().revenus.push({id:uid(),source:'💰 Salaire — '+b.nom,amount:amt,date:dt,note:'Versement dirigeant '+b.nom,isSalBiz:true,bizId:b.id});
+  cov('ov-sal');sch();
+  toast(f(amt)+' FCFA versés → revenus perso mis à jour ✓','sg');
+  rpB(curBizPg);
+}
+function cDelVers(id){
+  document.getElementById('ctxt').textContent='Supprimer ce versement ? (retiré aussi des revenus personnels)';
+  document.getElementById('bconf').onclick=()=>{
+    const bi=getBi();if(bi<0)return;const b=S.businesses[bi];
+    const v=b.mois[bmi].versements.find(x=>x.id===id);
+    if(v){b.mois[bmi].versements=b.mois[bmi].versements.filter(x=>x.id!==id);M().revenus=M().revenus.filter(r=>!(r.isSalBiz&&r.bizId===b.id&&r.amount===v.mt&&r.date===v.dt));}
+    cov('ov-conf');sch();rpB(curBizPg);
+  };ov('ov-conf');
+}
+
+// ============================================================
+// BIZ SETTINGS
+// ============================================================
+function rBSet(){
+  const el=document.getElementById('bizsett');
+  const businesses=S.businesses||[];
+  el.innerHTML=`<div style="font-size:14px;color:var(--s5);margin-bottom:18px;">Chaque business a son propre suivi de commandes, charges fixes, fournisseurs et salaire dirigeant. Le salaire versé alimente automatiquement vos finances personnelles.</div>
+  <div class="biz-sel-row">
+    ${businesses.map(b=>{
+      const bi=S.businesses.indexOf(b);
+      const ca=MN.reduce((_,__,i)=>_+bCA(bi,i),0);
+      return`<div class="biz-card on">
+        <div class="flex aic jb"><div><div class="biz-card-nm">${BT[b.type]||'📦'} ${es(b.nom)}</div><div class="biz-card-tp">${es(b.desc||'')}</div></div>
+        <button class="bico dl" onclick="cDelBiz('${b.id}','${es(b.nom)}')">🗑️</button></div>
+        <div class="txs tmu mt2">Salaire prévu : ${f(b.salPrev||0)} FCFA/mois</div>
+        <div class="txs tmu">CA cumulé : ${f(ca)} FCFA</div>
+        <button class="btn bcy bsm mt3" onclick="curBizId='${b.id}';updBSel();gpB('biz-db')">Voir le dashboard →</button>
+      </div>`;
+    }).join('')}
+    <div class="biz-card biz-card-add" onclick="ov('ov-nb')" style="min-width:150px;min-height:80px;">+ Nouveau business</div>
+  </div>
+  ${!businesses.length?`<div class="est"><div class="eico">🏢</div><p style="font-size:15px;font-weight:700;">Aucun business</p><button class="btn bcy mt3" onclick="ov('ov-nb')">Créer mon premier business</button></div>`:''}`;
+}
+function savNB(){
+  const nm=g('nb-nm'),tp=g('nb-tp'),ds=g('nb-ds'),sal=parseFloat(g('nb-sl'))||0;
+  if(!nm){toast('Nom du business requis','er');return;}
+  if(!S.businesses)S.businesses=[];
+  const nb=dBiz(nm,tp,ds,sal);S.businesses.push(nb);curBizId=nb.id;
+  updBSel();cov('ov-nb');sch();toast('Business "'+nm+'" créé ✓','sg');gpB('biz-db');
+}
+function cDelBiz(id,nm){
+  document.getElementById('ctxt').textContent=`Supprimer "${nm}" et toutes ses données ?`;
+  document.getElementById('bconf').onclick=()=>{S.businesses=S.businesses.filter(b=>b.id!==id);if(curBizId===id)curBizId=S.businesses[0]?.id||null;updBSel();cov('ov-conf');sch();rBSet();toast('Business supprimé','sg');};ov('ov-conf');
+}
+
+// ============================================================
+// SHARED UTILS
+// ============================================================
+function f(n){return Math.round(n||0).toLocaleString('fr-FR');}
+function es(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function g(id){return document.getElementById(id)?.value||'';}
+function sv(id,val){const e=document.getElementById(id);if(e)e.value=val;}
+function td(){return new Date().toISOString().slice(0,10);}
+function ov(id){document.getElementById(id)?.classList.add('on');}
+function cov(id){document.getElementById(id)?.classList.remove('on');}
+function bld(b,t,l=true){if(b){b.textContent=t;b.disabled=l;}}
+document.querySelectorAll('.ov').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('on');}));
+let ttmr=null;
+function toast(msg,type='sg'){
+  const t=document.getElementById('toast');t.innerHTML=`<span>${msg}</span>`;
+  t.className=`toast ${type} on`;clearTimeout(ttmr);ttmr=setTimeout(()=>t.classList.remove('on'),3500);
+}
+function toastUndo(msg,cb){
+  const t=document.getElementById('toast');
+  t.innerHTML=`<span>${msg}</span><button class="undo" onclick="(${cb.toString()})();document.getElementById('toast').classList.remove('on')">Annuler</button>`;
+  t.className='toast on';clearTimeout(ttmr);ttmr=setTimeout(()=>t.classList.remove('on'),5000);
+}
+function sErr(m){const e=document.getElementById('aerr');e.textContent=m;e.classList.add('on');}
+function hErr(){document.getElementById('aerr').classList.remove('on');}
+function stab(t){document.getElementById('tl').classList.toggle('on',t==='l');document.getElementById('tr2').classList.toggle('on',t==='r');document.getElementById('fl').style.display=t==='l'?'flex':'none';document.getElementById('fr').style.display=t==='r'?'flex':'none';hErr();}
+function fE(c){const m={'auth/email-already-in-use':'Email déjà utilisé','auth/invalid-email':'Email invalide','auth/wrong-password':'Email ou mot de passe incorrect','auth/user-not-found':'Compte introuvable','auth/weak-password':'Mot de passe trop faible','auth/invalid-credential':'Email ou mot de passe incorrect'};return m[c]||'Erreur : '+c;}
+</script>
 </body>
 </html>
