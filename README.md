@@ -1863,55 +1863,32 @@ async function askIA(type){
   iaLoading=true;
   const zone=document.getElementById('ia-resp-zone');
   if(!zone)return;
-  zone.innerHTML='<div class="ia-resp" style="color:var(--s4);">🤖 Analyse en cours… quelques secondes.</div>';
 
-  // Build rich context from user data
+  // Animated loading
+  let dots=0;
+  const loadMsgs=['🤖 Analyse en cours','🤖 Analyse en cours.','🤖 Analyse en cours..','🤖 Analyse en cours...'];
+  zone.innerHTML='<div class="ia-resp" style="color:var(--s4);" id="ia-load">🤖 Analyse en cours…</div>';
+  const loadInt=setInterval(()=>{const el=document.getElementById('ia-load');if(el)el.textContent=loadMsgs[dots++%4];},400);
+
+  // Build context from real user data
   const rev=tRev(mi),tdp=PK.reduce((s,k)=>s+pDep(mi,k),0),sol=rev-tdp;
   const dettesActives=(M().dettes||[]).filter(d=>d.total-d.paye>0);
   const totalDettes=dettesActives.reduce((s,d)=>s+(d.total-d.paye),0);
-  const planDetails=PK.map(k=>{const b=bgt(mi,k),d=pDep(mi,k);return `${PC[k].lb}: budget ${f(b)} FCFA, dépensé ${f(d)} FCFA (${b>0?(d/b*100).toFixed(0):0}%)`;}).join('; ');
-  const bizSummary=S.businesses?.length?S.businesses.map(b=>{const bi=S.businesses.indexOf(b);return `${b.nom}: CA ${f(bCA(bi,bmi))} FCFA, bénéfice ${f(bBen(bi,bmi))} FCFA`;}).join('; '):'Aucun business';
-  const objectifsInfo=(S.objectifs||[]).map(o=>`${o.icone||'🎯'} ${o.nom}: cible ${f(o.cible)} FCFA`).join('; ')||'Aucun objectif';
+  const planDetails=PK.map(k=>{const b2=bgt(mi,k),d2=pDep(mi,k);return PC[k].lb+': budget '+f(b2)+' FCFA, dépensé '+f(d2)+' FCFA ('+( b2>0?(d2/b2*100).toFixed(0):0)+'%)';}).join('; ');
+  const bizSummary=S.businesses&&S.businesses.length?S.businesses.map(b=>{const bi=S.businesses.indexOf(b);return b.nom+': CA '+f(bCA(bi,bmi))+' FCFA, bénéfice '+f(bBen(bi,bmi))+' FCFA';}).join('; '):'Aucun business';
+  const objectifsInfo=(S.objectifs||[]).map(o=>(o.icone||'🎯')+' '+o.nom+': cible '+f(o.cible)+' FCFA').join('; ')||'Aucun objectif';
+  const moisLabel=(MNS[mi]&&MNS[mi].label)?MNS[mi].label:'ce mois';
+  const typeLabels={analyse:'Analyse globale',conseils:'Conseils pratiques',epargne:'Stratégie épargne',dettes:'Stratégie dettes',business:'Analyse business'};
 
-  const prompts={
-    analyse:`Tu es un coach financier islamique et expert en gestion de finances personnelles en Afrique de l'Ouest (FCFA). Analyse les finances de cet utilisateur pour ${MNS[mi].label} et donne une analyse claire et honnête.
-
-DONNÉES FINANCIÈRES:
-- Revenus du mois: ${f(rev)} FCFA
-- Dépenses totales: ${f(tdp)} FCFA  
-- Solde: ${f(sol)} FCFA
-- Plans: ${planDetails}
-- Dettes actives: ${dettesActives.length} dette(s), total dû: ${f(totalDettes)} FCFA
-- Business: ${bizSummary}
-- Objectifs épargne: ${objectifsInfo}
-
-Donne une analyse structurée avec: 1) Points positifs 2) Points d'attention 3) Un score santé financière /10 avec justification. Sois direct, pratique, et adapté au contexte sénégalais.`,
-
-    conseils:`Tu es un coach financier islamique et expert en gestion de finances personnelles en Afrique de l'Ouest (FCFA). Donne 5 conseils pratiques et actionnables pour améliorer les finances de cet utilisateur.
-
-DONNÉES: Revenus ${f(rev)} FCFA, Dépenses ${f(tdp)} FCFA, Solde ${f(sol)} FCFA. Plans: ${planDetails}. Dettes: ${f(totalDettes)} FCFA. Business: ${bizSummary}.
-
-Les conseils doivent être concrets, réalisables dès ce mois, et adaptés à la réalité économique sénégalaise. Intègre des principes islamiques de gestion (éviter le gaspillage, sadaqa, investissement halal) de façon naturelle.`,
-
-    epargne:`Tu es expert en épargne et investissement islamique en Afrique de l'Ouest. Analyse l'épargne et donne une stratégie personnalisée.
-
-DONNÉES: Épargne ce mois: ${f(pDep(mi,'epargne'))} FCFA (${gp2('epargne')*100}% des revenus). Investissement: ${f(pDep(mi,'invest'))} FCFA. Revenus: ${f(rev)} FCFA. Objectifs: ${objectifsInfo}.
-
-Recommande: comment optimiser l'épargne, quels objectifs prioriser, options d'investissement halal adaptées au Sénégal (BRVM, immobilier, agriculture, commerce).`,
-
-    dettes:`Tu es conseiller en gestion de dettes islamique. Analyse la situation des dettes et propose une stratégie de remboursement.
-
-DETTES ACTIVES: ${dettesActives.map(d=>`${d.nom}: reste ${f(d.total-d.paye)} FCFA${d.dlim?', échéance '+d.dlim:''}`).join('; ')||'Aucune dette active'}.
-BUDGET DETTES: ${f(bgt(mi,'dette'))} FCFA/mois. REVENUS: ${f(rev)} FCFA.
-
-Propose une stratégie claire: ordre de remboursement, montants mensuels recommandés, conseils pour éviter de nouveaux endettements. Rappelle l'importance islamique de rembourser ses dettes.`,
-
-    business:`Tu es consultant business spécialisé dans les PME africaines. Analyse les performances business.
-
-BUSINESS: ${S.businesses?.map(b=>{const bi=S.businesses.indexOf(b);return `${b.nom} (${b.type}): CA ${f(bCA(bi,bmi))} FCFA, coûts variables ${f(bCV(bi,bmi))} FCFA, charges fixes ${f(bCF(bi,bmi))} FCFA, bénéfice net ${f(bBen(bi,bmi))} FCFA, salaire dirigeant versé ${f(bVers(bi,bmi))} FCFA`;}).join('; ')||'Aucun business'}.
-
-Analyse: rentabilité, ratio charges/CA, recommandations pour améliorer les marges, conseils de développement business adaptés au marché sénégalais.`
+  const promptTexts={
+    analyse:'Tu es un coach financier islamique expert en Afrique de lOuest (Sénégal, FCFA). Analyse les finances pour '+moisLabel+'. DONNÉES: Revenus: '+f(rev)+' FCFA | Dépenses: '+f(tdp)+' FCFA | Solde: '+f(sol)+' FCFA | Plans: '+planDetails+' | Dettes: '+dettesActives.length+' active(s), total dû: '+f(totalDettes)+' FCFA | Business: '+bizSummary+' | Objectifs: '+objectifsInfo+'. Réponds en français en 3 parties: 1) ✅ POINTS POSITIFS (2-3 points) 2) ⚠️ POINTS D'ATTENTION (2-3 points) 3) 🎯 SCORE SANTÉ FINANCIÈRE /10 + justification. Sois direct et adapté au contexte sénégalais.',
+    conseils:'Tu es un coach financier islamique expert en Afrique de lOuest (Sénégal, FCFA). Donne 5 conseils pratiques actionnables. SITUATION: Revenus '+f(rev)+' FCFA | Dépenses '+f(tdp)+' FCFA | Solde '+f(sol)+' FCFA | Plans: '+planDetails+' | Dettes: '+f(totalDettes)+' FCFA | Business: '+bizSummary+'. Réponds en français avec exactement 5 conseils numérotés, actionnables ce mois-ci. Adapte au Sénégal (tontines, AVEC, BRVM). Intègre des principes islamiques naturellement.',
+    epargne:'Tu es expert en épargne et investissement islamique en Afrique de lOuest. DONNÉES: Épargne: '+f(pDep(mi,'epargne'))+' FCFA ('+Math.round(gp2('epargne')*100)+'% revenus) | Investissement: '+f(pDep(mi,'invest'))+' FCFA | Revenus: '+f(rev)+' FCFA | Objectifs: '+objectifsInfo+'. Réponds en français en 3 parties: 💳 OPTIMISATION ÉPARGNE | 🎯 PRIORISATION OBJECTIFS | 📈 INVESTISSEMENTS HALAL au Sénégal (BRVM, immobilier, agriculture, commerce)',
+    dettes:'Tu es conseiller en gestion de dettes islamique. DETTES ACTIVES: '+( dettesActives.map(d=>d.nom+': reste '+f(d.total-d.paye)+' FCFA'+(d.dlim?', échéance '+d.dlim:'')).join(' | ')||'Aucune dette')+' | BUDGET MENSUEL DETTES: '+f(bgt(mi,'dette'))+' FCFA | REVENUS: '+f(rev)+' FCFA. Réponds en français: 📋 ORDRE DE REMBOURSEMENT recommandé | 💸 MONTANTS MENSUELS suggérés | 🛡️ CONSEILS ANTI-ENDETTEMENT + importance islamique de rembourser ses dettes',
+    business:'Tu es consultant PME africaines. BUSINESS: '+(S.businesses&&S.businesses.length?S.businesses.map(b=>{const bi=S.businesses.indexOf(b);return b.nom+': CA '+f(bCA(bi,bmi))+' FCFA, CV '+f(bCV(bi,bmi))+' FCFA, CF '+f(bCF(bi,bmi))+' FCFA, bénéfice '+f(bBen(bi,bmi))+' FCFA';}).join(' | '):'Aucun business')+'. Réponds en français: 📊 RENTABILITÉ (marge, ratio charges/CA) | ⚡ FORCES & FAIBLESSES | 🚀 3 RECOMMANDATIONS concrètes pour le marché sénégalais'
   };
+
+  const prompt=promptTexts[type]||promptTexts.analyse;
 
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1919,15 +1896,45 @@ Analyse: rentabilité, ratio charges/CA, recommandations pour améliorer les mar
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompts[type]||prompts.analyse}]
+        max_tokens:800,
+        messages:[{role:'user',content:prompt}]
       })
     });
+    clearInterval(loadInt);
+
+    if(!resp.ok){
+      const errData=await resp.json().catch(()=>({}));
+      const errMsg=errData&&errData.error&&errData.error.message?errData.error.message:'Erreur HTTP '+resp.status;
+      zone.innerHTML='<div class="ib ib-r"><span>❌</span><div><strong>Erreur API ('+resp.status+')</strong><br><span style="font-size:12px;">'+es(errMsg)+'</span></div></div>';
+      iaLoading=false;return;
+    }
+
     const data=await resp.json();
-    const text=data.content?.map(c=>c.text||'').join('')||'Erreur de réponse.';
-    zone.innerHTML=`<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--cy);">🤖 Analyse IA — ${type==='analyse'?'Analyse globale':type==='conseils'?'Conseils pratiques':type==='epargne'?'Stratégie épargne':type==='dettes'?'Stratégie dettes':'Analyse business'}</div><div class="ia-resp">${es(text)}</div></div>`;
+    const rawText=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('')||'Réponse vide.';
+
+    // Sanitize and format
+    const formatted=rawText
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/
+
++/g,'</p><p style="margin-top:10px;">')
+      .replace(/
+/g,'<br>');
+
+    zone.innerHTML='<div class="card">'
+      +'<div class="flex aic jb mb3">'
+      +'<div style="font-size:13px;font-weight:700;color:var(--cy);">🤖 '+(typeLabels[type]||'Analyse')+' — '+moisLabel+'</div>'
+      +'<button class="btn bo bsm" onclick="rIA()">← Retour</button>'
+      +'</div>'
+      +'<div class="ia-resp"><p>'+formatted+'</p></div>'
+      +'<div class="flex gi2 fw mt3">'
+      +Object.keys(typeLabels).filter(t=>t!==type).map(t=>'<button class="btn bo bsm" onclick="askIA(''+t+'')">'+{analyse:'📊',conseils:'💡',epargne:'💳',dettes:'⚠️',business:'🏢'}[t]+' '+typeLabels[t]+'</button>').join('')
+      +'</div></div>';
+
   }catch(err){
-    zone.innerHTML=`<div class="ib ib-r"><span>❌</span><span>Erreur de connexion à l'IA. Vérifie ta connexion internet.</span></div>`;
+    clearInterval(loadInt);
+    console.error('IA error:',err);
+    zone.innerHTML='<div class="ib ib-r"><span>❌</span><div><strong>Erreur de connexion</strong><br><span style="font-size:12px;">'+es(err.message||'Erreur inconnue')+'</span></div></div>';
   }
   iaLoading=false;
 }
